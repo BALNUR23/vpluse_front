@@ -76,6 +76,9 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [roleSubmitting, setRoleSubmitting] = useState(false);
+  const [internSubmitStatus, setInternSubmitStatus] = useState('');
+  const [internSubmitMessage, setInternSubmitMessage] = useState('');
+  const [internSubmitLoading, setInternSubmitLoading] = useState(false);
   const [error, setError] = useState('');
 
   const activeDay = useMemo(() => days.find((d) => String(d.id) === String(activeDayId)) || null, [days, activeDayId]);
@@ -111,6 +114,11 @@ export default function Onboarding() {
     isDayTwo &&
     !!selectedInternRoleId &&
     (reportStatus === 'sent' || reportStatus === 'accepted');
+  const dayFiveId = useMemo(
+    () => String(days.find((d) => Number(d.day_number) === 5)?.id || ''),
+    [days]
+  );
+  const dayFiveDone = dayFiveId ? String(dayStatusById[dayFiveId] || '').toUpperCase() === 'DONE' : false;
 
   const loadDayDetail = async (dayId, force = false) => {
     if (!dayId || (!force && dayDetails[String(dayId)])) return;
@@ -145,6 +153,12 @@ export default function Onboarding() {
       } catch {
         setInternRoleState(null);
       }
+      try {
+        const internOverviewRes = await regulationsAPI.internOverview();
+        setInternSubmitStatus(String(internOverviewRes.data?.request_status || '').toLowerCase());
+      } catch {
+        setInternSubmitStatus('');
+      }
 
       if (nextDays.length > 0) {
         const dayNumberParam = Number(new URLSearchParams(location.search).get('day') || 0);
@@ -169,6 +183,21 @@ export default function Onboarding() {
       setError(e.response?.data?.detail || 'Не удалось загрузить программу адаптации.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const submitInternCompletion = async () => {
+    setInternSubmitLoading(true);
+    setInternSubmitMessage('');
+    setError('');
+    try {
+      const res = await regulationsAPI.submitInternCompletion();
+      setInternSubmitStatus('pending');
+      setInternSubmitMessage(res.data?.message || 'Уведомление отправлено администратору.');
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Не удалось отправить уведомление о завершении стажировки.');
+    } finally {
+      setInternSubmitLoading(false);
     }
   };
 
@@ -524,6 +553,47 @@ export default function Onboarding() {
             <button className={`tab-btn ${tab === 'tasks' ? 'active' : ''}`} onClick={() => setTab('tasks')}>Задачи</button>
             <button className={`tab-btn ${tab === 'report' ? 'active' : ''}`} onClick={() => setTab('report')}>Отчет</button>
           </div>
+
+          {dayFiveDone && (
+            <div className="card" style={{ marginBottom: 14, border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+              <div className="card-body" style={{ padding: 14 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
+                  Завершение стажировки
+                </div>
+                <div style={{ fontSize: 13, color: '#1e3a8a', marginBottom: 10 }}>
+                  После завершения 5-го дня отправьте уведомление администратору для подтверждения перевода в сотрудника.
+                </div>
+                {internSubmitStatus === 'pending' && (
+                  <div style={{ fontSize: 13, color: '#854d0e', marginBottom: 8 }}>
+                    Заявка уже отправлена и ожидает подтверждения.
+                  </div>
+                )}
+                {internSubmitStatus === 'approved' && (
+                  <div style={{ fontSize: 13, color: '#166534', marginBottom: 8 }}>
+                    Заявка подтверждена. Стажировка завершена.
+                  </div>
+                )}
+                {internSubmitStatus === 'rejected' && (
+                  <div style={{ fontSize: 13, color: '#991b1b', marginBottom: 8 }}>
+                    Предыдущая заявка была отклонена. Вы можете отправить повторно.
+                  </div>
+                )}
+                {!['pending', 'approved'].includes(internSubmitStatus) && (
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={submitInternCompletion}
+                    disabled={internSubmitLoading}
+                  >
+                    {internSubmitLoading ? 'Отправляем...' : 'Отправить уведомление об окончании стажировки'}
+                  </button>
+                )}
+                {!!internSubmitMessage && (
+                  <div style={{ fontSize: 13, color: '#166534', marginTop: 8 }}>{internSubmitMessage}</div>
+                )}
+              </div>
+            </div>
+          )}
 
           {tab === 'onboarding' && activeDay && (
             <div className="onboarding-day-card">

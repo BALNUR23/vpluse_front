@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import {
-  getNotificationsForUser,
-  getUnreadCountForUser,
-  markAllNotificationsRead,
-} from '../../utils/notifications';
+import { notificationsAPI } from '../../api/content';
 
 const ROLE_COLORS = {
   intern: '#2563EB',
@@ -39,22 +35,33 @@ export default function Header({ title }) {
     welcome: 'Добро пожаловать', notifications: 'Уведомления', read: 'Прочитано', noEvents: 'Новых событий нет.', profile: 'Профиль', logout: 'Выйти',
   };
 
-  const refreshNotifications = () => {
-    if (!user) return;
-    setNotifs(getNotificationsForUser(user));
-    setUnreadCount(getUnreadCountForUser(user));
+  const refreshNotifications = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await notificationsAPI.list();
+      const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+      setNotifs(items);
+      setUnreadCount(Number(res?.data?.unread_count || 0));
+    } catch {
+      setNotifs([]);
+      setUnreadCount(0);
+    }
   };
 
   useEffect(() => {
     refreshNotifications();
-    const i = setInterval(refreshNotifications, 5000);
+    const i = setInterval(() => { refreshNotifications(); }, 10000);
     return () => clearInterval(i);
   }, [user?.id, user?.role]);
 
-  const readAllNotifications = () => {
-    if (!user) return;
-    markAllNotificationsRead(user.id, notifs.map((n) => n.id));
-    setUnreadCount(0);
+  const readAllNotifications = async () => {
+    if (!user?.id) return;
+    try {
+      await notificationsAPI.markAllRead();
+      await refreshNotifications();
+    } catch {
+      // ignore UI error to keep header lightweight
+    }
   };
 
   return (
@@ -103,8 +110,8 @@ export default function Header({ title }) {
               {notifs.map((n) => (
                 <div key={n.id} style={{ padding: '8px 10px', borderBottom: '1px solid var(--gray-100)' }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gray-800)' }}>{n.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 2 }}>{n.text}</div>
-                  {n.ts && <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 3 }}>{String(n.ts)}</div>}
+                  <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 2 }}>{n.message}</div>
+                  {n.created_at && <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 3 }}>{new Date(n.created_at).toLocaleString('ru-RU')}</div>}
                 </div>
               ))}
             </div>

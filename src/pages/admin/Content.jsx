@@ -47,7 +47,7 @@ export default function AdminContent() {
       setRegs(Array.isArray(regRes.data) ? regRes.data : []);
       setInstructions(Array.isArray(instructionsRes.data) ? instructionsRes.data : []);
     } catch (e) {
-      setError(e.response?.data?.detail || 'Не удалось загрузить контент.');
+      setError(e.response?.data?.detail || 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РєРѕРЅС‚РµРЅС‚.');
     } finally {
       setLoading(false);
     }
@@ -80,14 +80,14 @@ export default function AdminContent() {
       setNewsImage(null);
       await load();
     } catch (e) {
-      setError(e.response?.data?.detail || 'Ошибка сохранения новости.');
+      setError(e.response?.data?.detail || 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РЅРѕРІРѕСЃС‚Рё.');
     }
   };
 
   const saveReg = async () => {
     if (!regForm.title.trim()) return;
     if (regForm.type === 'file' && !regEditId && !regFile) {
-      setError('Выберите файл перед добавлением регламента.');
+      setError('Р’С‹Р±РµСЂРёС‚Рµ С„Р°Р№Р» РїРµСЂРµРґ РґРѕР±Р°РІР»РµРЅРёРµРј СЂРµРіР»Р°РјРµРЅС‚Р°.');
       return;
     }
 
@@ -126,7 +126,7 @@ export default function AdminContent() {
     } catch (e) {
       const detail = e.response?.data;
       if (detail?.file?.[0]) setError(detail.file[0]);
-      else setError(e.response?.data?.detail || 'Ошибка сохранения регламента.');
+      else setError(e.response?.data?.detail || 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ СЂРµРіР»Р°РјРµРЅС‚Р°.');
     }
   };
 
@@ -146,7 +146,7 @@ export default function AdminContent() {
       setInstructionEditId(null);
       await load();
     } catch (e) {
-      setError(e.response?.data?.detail || 'Ошибка сохранения инструкции.');
+      setError(e.response?.data?.detail || 'РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РёРЅСЃС‚СЂСѓРєС†РёРё.');
     }
   };
 
@@ -170,50 +170,50 @@ export default function AdminContent() {
   };
 
   return (
-    <MainLayout title="Администрирование">
+    <MainLayout title="РђРґРјРёРЅРёСЃС‚СЂРёСЂРѕРІР°РЅРёРµ">
       <div className="page-header">
         <div>
-          <div className="page-title">Управление контентом</div>
-          <div className="page-subtitle">Новости, регламенты и инструкции</div>
+          <div className="page-title">РЈРїСЂР°РІР»РµРЅРёРµ РєРѕРЅС‚РµРЅС‚РѕРј</div>
+          <div className="page-subtitle">РќРѕРІРѕСЃС‚Рё, СЂРµРіР»Р°РјРµРЅС‚С‹ Рё РёРЅСЃС‚СЂСѓРєС†РёРё</div>
         </div>
       </div>
 
       {error && <div className="card" style={{ marginBottom: 12 }}><div className="card-body" style={{ color: '#b91c1c' }}>{error}</div></div>}
-      {loading && <div className="card"><div className="card-body">Загрузка...</div></div>}
+      {loading && <div className="card"><div className="card-body">Р—Р°РіСЂСѓР·РєР°...</div></div>}
 
       {!loading && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 14 }}>
-            <Stat title="Новости" value={stats.news} />
-            <Stat title="Регламенты" value={stats.regs} />
-            <Stat title="Инструкции" value={stats.instructions} />
+            <Stat title="РќРѕРІРѕСЃС‚Рё" value={stats.news} />
+            <Stat title="Р РµРіР»Р°РјРµРЅС‚С‹" value={stats.regs} />
+            <Stat title="РРЅСЃС‚СЂСѓРєС†РёРё" value={stats.instructions} />
           </div>
 
           <div className="tabs">
-            <button className={`tab-btn ${tab === 'news' ? 'active' : ''}`} onClick={() => setTab('news')}>Новости</button>
-            <button className={`tab-btn ${tab === 'regulations' ? 'active' : ''}`} onClick={() => setTab('regulations')}>Регламенты</button>
-            <button className={`tab-btn ${tab === 'instructions' ? 'active' : ''}`} onClick={() => setTab('instructions')}>Инструкции</button>
+            <button className={`tab-btn ${tab === 'news' ? 'active' : ''}`} onClick={() => setTab('news')}>РќРѕРІРѕСЃС‚Рё</button>
+            <button className={`tab-btn ${tab === 'regulations' ? 'active' : ''}`} onClick={() => setTab('regulations')}>Р РµРіР»Р°РјРµРЅС‚С‹</button>
+            <button className={`tab-btn ${tab === 'instructions' ? 'active' : ''}`} onClick={() => setTab('instructions')}>РРЅСЃС‚СЂСѓРєС†РёРё</button>
           </div>
 
           {tab === 'news' && (
             <>
               <div className="card" style={{ marginBottom: 12 }}>
                 <div className="card-body" style={{ display: 'grid', gap: 10 }}>
-                  <input className="form-input" placeholder="Заголовок" value={newsForm.title} onChange={(e) => setNewsForm((f) => ({ ...f, title: e.target.value }))} />
-                  <textarea className="form-textarea" placeholder="Текст новости" value={newsForm.full_text} onChange={(e) => setNewsForm((f) => ({ ...f, full_text: e.target.value }))} />
+                  <input className="form-input" placeholder="Р—Р°РіРѕР»РѕРІРѕРє" value={newsForm.title} onChange={(e) => setNewsForm((f) => ({ ...f, title: e.target.value }))} />
+                  <textarea className="form-textarea" placeholder="РўРµРєСЃС‚ РЅРѕРІРѕСЃС‚Рё" value={newsForm.full_text} onChange={(e) => setNewsForm((f) => ({ ...f, full_text: e.target.value }))} />
                   <div style={{ display: 'grid', gap: 6 }}>
                     <input className="form-input" type="file" accept="image/*" onChange={(e) => setNewsImage(e.target.files?.[0] || null)} />
-                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{newsImage ? `Выбрано изображение: ${newsImage.name}` : 'Изображение не выбрано'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{newsImage ? `Р’С‹Р±СЂР°РЅРѕ РёР·РѕР±СЂР°Р¶РµРЅРёРµ: ${newsImage.name}` : 'РР·РѕР±СЂР°Р¶РµРЅРёРµ РЅРµ РІС‹Р±СЂР°РЅРѕ'}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-primary btn-sm" onClick={saveNews}><Plus size={13} /> {newsEditId ? 'Сохранить' : 'Добавить'}</button>
-                    {newsEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setNewsEditId(null); setNewsForm(emptyNews); setNewsImage(null); }}>Отмена</button>}
+                    <button className="btn btn-primary btn-sm" onClick={saveNews}><Plus size={13} /> {newsEditId ? 'РЎРѕС…СЂР°РЅРёС‚СЊ' : 'Р”РѕР±Р°РІРёС‚СЊ'}</button>
+                    {newsEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setNewsEditId(null); setNewsForm(emptyNews); setNewsImage(null); }}>РћС‚РјРµРЅР°</button>}
                   </div>
                 </div>
               </div>
               <DataTable
                 rows={news}
-                columns={[{ key: 'title', label: 'ЗАГОЛОВОК' }, { key: 'published_at', label: 'ДАТА' }]}
+                columns={[{ key: 'title', label: 'Р—РђР“РћР›РћР’РћРљ' }, { key: 'published_at', label: 'Р”РђРўРђ' }]}
                 onEdit={(item) => {
                   setNewsEditId(item.id);
                   setNewsForm({ title: item.title || '', full_text: item.full_text || '', language: item.language || 'ru' });
@@ -231,15 +231,15 @@ export default function AdminContent() {
             <>
               <div className="card" style={{ marginBottom: 12 }}>
                 <div className="card-body" style={{ display: 'grid', gap: 10 }}>
-                  <input className="form-input" placeholder="Название" value={regForm.title} onChange={(e) => setRegForm((f) => ({ ...f, title: e.target.value }))} />
-                  <textarea className="form-textarea" placeholder="Описание" value={regForm.description} onChange={(e) => setRegForm((f) => ({ ...f, description: e.target.value }))} />
+                  <input className="form-input" placeholder="РќР°Р·РІР°РЅРёРµ" value={regForm.title} onChange={(e) => setRegForm((f) => ({ ...f, title: e.target.value }))} />
+                  <textarea className="form-textarea" placeholder="РћРїРёСЃР°РЅРёРµ" value={regForm.description} onChange={(e) => setRegForm((f) => ({ ...f, description: e.target.value }))} />
                   <select className="form-select" value={regForm.type} onChange={(e) => { setRegForm((f) => ({ ...f, type: e.target.value })); setRegFile(null); }}>
-                    <option value="link">Ссылка</option>
-                    <option value="file">Файл</option>
+                    <option value="link">РЎСЃС‹Р»РєР°</option>
+                    <option value="file">Р¤Р°Р№Р»</option>
                   </select>
 
                   <div className="form-group">
-                    <label className="form-label">Допустимые ошибки</label>
+                    <label className="form-label">Р”РѕРїСѓСЃС‚РёРјС‹Рµ РѕС€РёР±РєРё</label>
                     <input
                       className="form-input"
                       type="number"
@@ -252,19 +252,19 @@ export default function AdminContent() {
 
                   <div style={{ border: '1px solid var(--gray-200)', borderRadius: 10, padding: 10, display: 'grid', gap: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontWeight: 700, fontSize: 13 }}>Тест по регламенту</div>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>РўРµСЃС‚ РїРѕ СЂРµРіР»Р°РјРµРЅС‚Сѓ</div>
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
                         onClick={() => setRegForm((f) => ({ ...f, quiz_questions: [...(f.quiz_questions || []), createEmptyQuizQuestion()] }))}
                       >
-                        <Plus size={13} /> Добавить вопрос
+                        <Plus size={13} /> Р”РѕР±Р°РІРёС‚СЊ РІРѕРїСЂРѕСЃ
                       </button>
                     </div>
                     {(regForm.quiz_questions || []).map((q, qIdx) => (
                       <div key={`quiz-${qIdx}`} style={{ border: '1px solid var(--gray-200)', borderRadius: 8, padding: 8, display: 'grid', gap: 8 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontSize: 12, color: 'var(--gray-600)' }}>Вопрос {qIdx + 1}</div>
+                          <div style={{ fontSize: 12, color: 'var(--gray-600)' }}>Р’РѕРїСЂРѕСЃ {qIdx + 1}</div>
                           <button
                             type="button"
                             className="btn-icon"
@@ -276,7 +276,7 @@ export default function AdminContent() {
                         </div>
                         <input
                           className="form-input"
-                          placeholder="Текст вопроса"
+                          placeholder="РўРµРєСЃС‚ РІРѕРїСЂРѕСЃР°"
                           value={q.question || ''}
                           onChange={(e) => updateQuizQuestion(qIdx, { question: e.target.value })}
                         />
@@ -284,7 +284,7 @@ export default function AdminContent() {
                           <div key={`quiz-${qIdx}-opt-${oIdx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 6 }}>
                             <input
                               className="form-input"
-                              placeholder={`Вариант ${oIdx + 1}`}
+                              placeholder={`Р’Р°СЂРёР°РЅС‚ ${oIdx + 1}`}
                               value={opt || ''}
                               onChange={(e) => updateQuizOption(qIdx, oIdx, e.target.value)}
                             />
@@ -293,7 +293,7 @@ export default function AdminContent() {
                               className={`btn btn-sm ${String(q.correct_answer || '') === String(opt || '') ? 'btn-primary' : 'btn-secondary'}`}
                               onClick={() => updateQuizQuestion(qIdx, { correct_answer: q.options?.[oIdx] || '' })}
                             >
-                              Правильный
+                              РџСЂР°РІРёР»СЊРЅС‹Р№
                             </button>
                             <button
                               type="button"
@@ -327,12 +327,12 @@ export default function AdminContent() {
                             }))
                           }
                         >
-                          <Plus size={13} /> Добавить вариант
+                          <Plus size={13} /> Р”РѕР±Р°РІРёС‚СЊ РІР°СЂРёР°РЅС‚
                         </button>
                       </div>
                     ))}
                     {(regForm.quiz_questions || []).length === 0 && (
-                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Без вопросов тест по регламенту не обязателен.</div>
+                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Р‘РµР· РІРѕРїСЂРѕСЃРѕРІ С‚РµСЃС‚ РїРѕ СЂРµРіР»Р°РјРµРЅС‚Сѓ РЅРµ РѕР±СЏР·Р°С‚РµР»РµРЅ.</div>
                     )}
                   </div>
 
@@ -342,22 +342,22 @@ export default function AdminContent() {
                   {regForm.type === 'file' && (
                     <div style={{ display: 'grid', gap: 6 }}>
                       <input className="form-input" type="file" accept=".pdf,application/pdf" onChange={(e) => setRegFile(e.target.files?.[0] || null)} />
-                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{regFile ? `Выбран файл: ${regFile.name}` : 'Файл не выбран'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{regFile ? `Р’С‹Р±СЂР°РЅ С„Р°Р№Р»: ${regFile.name}` : 'Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ'}</div>
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-primary btn-sm" onClick={saveReg}><Plus size={13} /> {regEditId ? 'Сохранить' : 'Добавить'}</button>
-                    {regEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setRegEditId(null); setRegForm(emptyReg); setRegFile(null); }}>Отмена</button>}
+                    <button className="btn btn-primary btn-sm" onClick={saveReg}><Plus size={13} /> {regEditId ? 'РЎРѕС…СЂР°РЅРёС‚СЊ' : 'Р”РѕР±Р°РІРёС‚СЊ'}</button>
+                    {regEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setRegEditId(null); setRegForm(emptyReg); setRegFile(null); }}>РћС‚РјРµРЅР°</button>}
                   </div>
                 </div>
               </div>
               <DataTable
                 rows={regs}
                 columns={[
-                  { key: 'title', label: 'НАЗВАНИЕ' },
-                  { key: 'type', label: 'ТИП' },
-                  { key: 'quiz_questions_count', label: 'ВОПРОСОВ' },
-                  { key: 'created_at', label: 'СОЗДАНО' },
+                  { key: 'title', label: 'РќРђР—Р’РђРќРР•' },
+                  { key: 'type', label: 'РўРРџ' },
+                  { key: 'quiz_questions_count', label: 'Р’РћРџР РћРЎРћР’' },
+                  { key: 'created_at', label: 'РЎРћР—Р”РђРќРћ' },
                 ]}
                 onEdit={(item) => {
                   setRegEditId(item.id);
@@ -391,24 +391,24 @@ export default function AdminContent() {
                       <option value="kg">KG</option>
                     </select>
                     <select className="form-select" value={instructionForm.type} onChange={(e) => setInstructionForm((f) => ({ ...f, type: e.target.value }))}>
-                      <option value="text">Текст</option>
-                      <option value="link">Ссылка</option>
+                      <option value="text">РўРµРєСЃС‚</option>
+                      <option value="link">РЎСЃС‹Р»РєР°</option>
                     </select>
                   </div>
-                  <textarea className="form-textarea" placeholder={instructionForm.type === 'link' ? 'https://...' : 'Текст инструкции'} value={instructionForm.content} onChange={(e) => setInstructionForm((f) => ({ ...f, content: e.target.value }))} />
+                  <textarea className="form-textarea" placeholder={instructionForm.type === 'link' ? 'https://...' : 'РўРµРєСЃС‚ РёРЅСЃС‚СЂСѓРєС†РёРё'} value={instructionForm.content} onChange={(e) => setInstructionForm((f) => ({ ...f, content: e.target.value }))} />
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn btn-primary btn-sm" onClick={saveInstruction}><Plus size={13} /> {instructionEditId ? 'Сохранить' : 'Добавить инструкцию'}</button>
-                    {instructionEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setInstructionEditId(null); setInstructionForm(emptyInstruction); }}>Отмена</button>}
+                    <button className="btn btn-primary btn-sm" onClick={saveInstruction}><Plus size={13} /> {instructionEditId ? 'РЎРѕС…СЂР°РЅРёС‚СЊ' : 'Р”РѕР±Р°РІРёС‚СЊ РёРЅСЃС‚СЂСѓРєС†РёСЋ'}</button>
+                    {instructionEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setInstructionEditId(null); setInstructionForm(emptyInstruction); }}>РћС‚РјРµРЅР°</button>}
                   </div>
                 </div>
               </div>
               <DataTable
                 rows={instructions}
                 columns={[
-                  { key: 'type', label: 'ТИП' },
-                  { key: 'language', label: 'ЯЗЫК' },
-                  { key: 'content', label: 'СОДЕРЖАНИЕ' },
-                  { key: 'updated_at', label: 'ОБНОВЛЕНО' },
+                  { key: 'type', label: 'РўРРџ' },
+                  { key: 'language', label: 'РЇР—Р«Рљ' },
+                  { key: 'content', label: 'РЎРћР”Р•Р Р–РђРќРР•' },
+                  { key: 'updated_at', label: 'РћР‘РќРћР’Р›Р•РќРћ' },
                 ]}
                 onEdit={(item) => {
                   setInstructionEditId(item.id);
@@ -447,7 +447,7 @@ function DataTable({ rows, columns, onEdit, onDelete, hideActions = false, mapRo
           <thead>
             <tr>
               {columns.map((c) => <th key={c.key}>{c.label}</th>)}
-              {!hideActions && <th>ДЕЙСТВИЯ</th>}
+              {!hideActions && <th>Р”Р•Р™РЎРўР’РРЇ</th>}
             </tr>
           </thead>
           <tbody>
@@ -467,7 +467,7 @@ function DataTable({ rows, columns, onEdit, onDelete, hideActions = false, mapRo
               </tr>
             ))}
             {prepared.length === 0 && (
-              <tr><td colSpan={columns.length + (hideActions ? 0 : 1)}>Данных пока нет.</td></tr>
+              <tr><td colSpan={columns.length + (hideActions ? 0 : 1)}>Р”Р°РЅРЅС‹С… РїРѕРєР° РЅРµС‚.</td></tr>
             )}
           </tbody>
         </table>

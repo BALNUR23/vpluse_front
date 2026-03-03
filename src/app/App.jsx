@@ -16,6 +16,7 @@ import Company        from '../pages/user/Company';
 
 import AdminUsers      from '../pages/admin/Users';
 import AdminRoles      from '../pages/admin/Roles';
+import AdminDepartmentsSubdivisions from '../pages/admin/DepartmentsSubdivisions';
 import AdminContent    from '../pages/admin/Content';
 import AdminOnboarding from '../pages/admin/Onboarding';
 import AdminOverview   from '../pages/admin/Overview';
@@ -23,6 +24,8 @@ import AdminSchedules  from '../pages/admin/Schedules';
 import AdminFeedback   from '../pages/admin/Feedback';
 import AdminSystem     from '../pages/admin/System';
 import AdminInterface  from '../pages/admin/Interface';
+import AttendanceMarks from '../pages/admin/AttendanceMarks';
+import AdminInterns    from '../pages/admin/Interns';
 import AutoLocaleText  from '../components/common/AutoLocaleText';
 
 function HomeRedirect() {
@@ -67,6 +70,15 @@ function OnboardingManageRoute({ children }) {
   return children;
 }
 
+function InternsManageRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!['admin', 'superadmin'].includes(String(user.role || '').toLowerCase())) {
+    return <Navigate to="/admin/overview" replace />;
+  }
+  return children;
+}
+
 function NonInternRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -74,12 +86,12 @@ function NonInternRoute({ children }) {
   return children;
 }
 
-// Р—Р°СЂРїР»Р°С‚Р°: РІСЃРµ РєСЂРѕРјРµ СЃС‚Р°Р¶С‘СЂР°
+// Зарплата: все кроме стажера
 function SalaryRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'intern') return <Navigate to="/dashboard" replace />;
-  // superadmin вЂ” С‡РµСЂРµР· /salary С‚РѕР¶Рµ СЂР°Р±РѕС‚Р°РµС‚
+  // superadmin тоже может использовать /salary
   if (user.role === 'department_head' || user.role === 'admin' || user.role === 'superadmin') return children;
   return children;
 }
@@ -95,6 +107,15 @@ function TasksRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'superadmin') return <Navigate to="/admin/overview" replace />;
+  return children;
+}
+
+function AttendanceMarksRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!['projectmanager', 'department_head', 'admin', 'superadmin'].includes(String(user.role || '').toLowerCase())) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return children;
 }
 
@@ -134,12 +155,15 @@ function AppRoutes() {
       <Route path="/company"        element={<CompanyRoute><Company /></CompanyRoute>} />
       <Route path="/tasks"          element={<TasksRoute><Tasks /></TasksRoute>} />
       <Route path="/salary"         element={<SalaryRoute><Salary /></SalaryRoute>} />
+      <Route path="/attendance-marks" element={<AttendanceMarksRoute><AttendanceMarks /></AttendanceMarksRoute>} />
 
       <Route path="/admin/overview"   element={<AdminRoute><AdminOverview /></AdminRoute>} />
       <Route path="/admin/users"      element={<AdminRoute><AdminUsers /></AdminRoute>} />
       <Route path="/admin/roles"      element={<AdminRoute><AdminRoles /></AdminRoute>} />
+      <Route path="/admin/departments-subdivisions" element={<AdminRoute><AdminDepartmentsSubdivisions /></AdminRoute>} />
       <Route path="/admin/content"    element={<ContentManageRoute><AdminContent /></ContentManageRoute>} />
       <Route path="/admin/onboarding" element={<OnboardingManageRoute><AdminOnboarding /></OnboardingManageRoute>} />
+      <Route path="/admin/interns"    element={<InternsManageRoute><AdminInterns /></InternsManageRoute>} />
       <Route path="/admin/schedules"  element={<AdminRoute><AdminSchedules /></AdminRoute>} />
       <Route path="/admin/feedback"   element={<AdminRoute><AdminFeedback /></AdminRoute>} />
       <Route path="/admin/system"     element={<SuperAdminRoute><AdminSystem /></SuperAdminRoute>} />

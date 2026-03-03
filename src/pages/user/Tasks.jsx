@@ -262,6 +262,9 @@ export default function Tasks() {
   const internRoleByData = String(progressData?.user?.role || '').toLowerCase();
   const internRoleByCard = String(progressUser?.role || '').toLowerCase();
   const isInternMember = internRoleByData.includes('intern') || internRoleByCard.includes('intern');
+  const completedDays = Number(progressData?.overview?.completed_days || 0);
+  const totalDays = Number(progressData?.overview?.total_days || 0);
+  const progressPercent = totalDays > 0 ? Math.min(100, Math.round((completedDays / totalDays) * 100)) : 0;
 
   return (
     <MainLayout title="Задачи">
@@ -485,11 +488,25 @@ export default function Tasks() {
                 <div>Загрузка...</div>
               ) : (
                 <>
-                  <div style={{ fontSize: 13, color: 'var(--gray-600)', marginBottom: 8 }}>
-                    День: {progressData?.overview?.current_day_number || '-'} | Выполнено: {progressData?.overview?.completed_days || 0}/{progressData?.overview?.total_days || 0}
-                  </div>
                   {isInternMember ? (
                     <>
+                      <div style={{ fontSize: 13, color: 'var(--gray-600)', marginBottom: 8 }}>
+                        День: {progressData?.overview?.current_day_number || '-'} | Выполнено: {completedDays}/{totalDays}
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                          Прогресс стажировки: {progressPercent}%
+                        </div>
+                        <div style={{ height: 10, borderRadius: 999, background: 'var(--gray-200)', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${progressPercent}%`,
+                              height: '100%',
+                              background: 'var(--primary)',
+                            }}
+                          />
+                        </div>
+                      </div>
                       <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Регламенты</div>
                       <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--gray-200)', borderRadius: 8, padding: 8, marginBottom: 10 }}>
                         {(progressData?.regulations || []).map((item) => (
@@ -500,11 +517,7 @@ export default function Tasks() {
                         {(progressData?.regulations || []).length === 0 && <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Нет данных.</div>}
                       </div>
                     </>
-                  ) : (
-                    <div style={{ fontSize: 12, color: 'var(--gray-600)', marginBottom: 10 }}>
-                      Для сотрудников (не стажеров) показываются только задачи по колонкам.
-                    </div>
-                  )}
+                  ) : null}
                   <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Задачи</div>
                   <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid var(--gray-200)', borderRadius: 8, padding: 8 }}>
                     {(progressData?.tasks || []).map((item) => (

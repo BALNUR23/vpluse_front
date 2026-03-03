@@ -8,6 +8,7 @@ import {
   subdivisionsAPI,
   promotionRequestsAPI,
 } from '../../api/auth';
+import { regulationsAPI } from '../../api/content';
 
 const ROLE_LABELS = {
   intern: 'Стажер',
@@ -66,6 +67,7 @@ export default function AdminUsers() {
   const [departments, setDepartments] = useState([]);
   const [subdivisions, setSubdivisions] = useState([]);
   const [promotionRequests, setPromotionRequests] = useState([]);
+  const [internRequests, setInternRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -88,10 +90,12 @@ export default function AdminUsers() {
         subdivisionsAPI.list({ is_active: true }),
         promotionRequestsAPI.list(),
       ]);
+      const internReqRes = await regulationsAPI.adminInternRequests({ status: 'pending' }).catch(() => ({ data: [] }));
       setUsers((Array.isArray(usersRes.data) ? usersRes.data : []).map(mapUser));
       setDepartments(Array.isArray(depRes.data) ? depRes.data : []);
       setSubdivisions(Array.isArray(subRes.data) ? subRes.data : []);
       setPromotionRequests(Array.isArray(promotionRes.data) ? promotionRes.data : []);
+      setInternRequests(Array.isArray(internReqRes.data) ? internReqRes.data : []);
     } catch {
       setError('Не удалось загрузить данные.');
     } finally {
@@ -118,6 +122,10 @@ export default function AdminUsers() {
   const pending = useMemo(
     () => promotionRequests.filter((r) => r.status === 'pending'),
     [promotionRequests]
+  );
+  const pendingInternRequests = useMemo(
+    () => internRequests.filter((r) => String(r.status || '').toLowerCase() === 'pending'),
+    [internRequests]
   );
 
   const openAdd = () => {
@@ -211,6 +219,15 @@ export default function AdminUsers() {
     }
   };
 
+  const approveInternCompletion = async (id) => {
+    try {
+      await regulationsAPI.approveInternRequest(id, {});
+      await loadAll();
+    } catch {
+      setError('Не удалось подтвердить стажировку.');
+    }
+  };
+
   const managerOptions = useMemo(() => {
     const effectiveDepartment = isDepartmentHead
       ? ((form.role === 'employee' || form.role === 'projectmanager') ? ownDepartmentId : '')
@@ -259,6 +276,33 @@ export default function AdminUsers() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-primary btn-sm" onClick={() => handleApprove(req.id)}><Check size={14} /> Одобрить</button>
                   <button className="btn btn-secondary btn-sm" onClick={() => handleReject(req.id)}><Ban size={14} /> Отклонить</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {(user?.role === 'admin' || user?.role === 'superadmin') ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-header">
+            <span className="card-title">Заявки стажеров на завершение</span>
+            <span className="badge badge-blue">{pendingInternRequests.length}</span>
+          </div>
+          <div className="card-body">
+            {pendingInternRequests.length === 0 ? <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>Новых заявок нет.</div> : null}
+            {pendingInternRequests.map((req) => (
+              <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{req.username || `ID ${req.user}`}</div>
+                  <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                    Отправлено: {String(req.requested_at || '').slice(0, 16).replace('T', ' ') || '—'}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => approveInternCompletion(req.id)}>
+                    <Check size={14} /> Подтвердить в сотрудника
+                  </button>
                 </div>
               </div>
             ))}

@@ -4,11 +4,11 @@ import MainLayout from '../../layouts/MainLayout';
 import { onboardingAPI } from '../../api/content';
 
 const STATUS = {
-  DRAFT: { label: 'Черновик', cls: 'badge-gray' },
-  SENT: { label: 'Отправлен', cls: 'badge-blue' },
-  ACCEPTED: { label: 'Принят', cls: 'badge-green' },
-  REVISION: { label: 'На доработке', cls: 'badge-yellow' },
-  REJECTED: { label: 'Отклонен', cls: 'badge-red' },
+  DRAFT: { label: 'Р§РµСЂРЅРѕРІРёРє', cls: 'badge-gray' },
+  SENT: { label: 'РћС‚РїСЂР°РІР»РµРЅ', cls: 'badge-blue' },
+  ACCEPTED: { label: 'РџСЂРёРЅСЏС‚', cls: 'badge-green' },
+  REVISION: { label: 'РќР° РґРѕСЂР°Р±РѕС‚РєРµ', cls: 'badge-yellow' },
+  REJECTED: { label: 'РћС‚РєР»РѕРЅРµРЅ', cls: 'badge-red' },
 };
 
 export default function AdminOnboarding() {
@@ -33,7 +33,7 @@ export default function AdminOnboarding() {
       setDays(Array.isArray(daysRes.data) ? daysRes.data : []);
       setReports(Array.isArray(reportsRes.data) ? reportsRes.data : []);
     } catch (e) {
-      setError(e.response?.data?.detail || 'Не удалось загрузить onboarding данные.');
+      setError(e.response?.data?.detail || 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ onboarding РґР°РЅРЅС‹Рµ.');
     } finally {
       setLoading(false);
     }
@@ -84,28 +84,28 @@ export default function AdminOnboarding() {
       });
       setSelected(null);
       setComment('');
-      setToast(status === 'ACCEPTED' ? 'Отчет принят' : status === 'REVISION' ? 'Отправлен на доработку' : 'Отчет отклонен');
+      setToast(status === 'ACCEPTED' ? 'РћС‚С‡РµС‚ РїСЂРёРЅСЏС‚' : status === 'REVISION' ? 'РћС‚РїСЂР°РІР»РµРЅ РЅР° РґРѕСЂР°Р±РѕС‚РєСѓ' : 'РћС‚С‡РµС‚ РѕС‚РєР»РѕРЅРµРЅ');
       setTimeout(() => setToast(''), 2500);
       await load();
     } catch (e) {
-      setError(e.response?.data?.detail || 'Не удалось изменить статус отчета.');
+      setError(e.response?.data?.detail || 'РќРµ СѓРґР°Р»РѕСЃСЊ РёР·РјРµРЅРёС‚СЊ СЃС‚Р°С‚СѓСЃ РѕС‚С‡РµС‚Р°.');
     }
   };
 
   return (
-    <MainLayout title="Админ-панель · Онбординг / Отчеты">
+    <MainLayout title="РђРґРјРёРЅ-РїР°РЅРµР»СЊ В· РћРЅР±РѕСЂРґРёРЅРі / РћС‚С‡РµС‚С‹">
       <div className="page-header">
-        <div className="page-title">Онбординг / Отчеты</div>
-        <div className="page-subtitle">Проверка отчетов стажеров и контроль прогресса</div>
+        <div className="page-title">РћРЅР±РѕСЂРґРёРЅРі / РћС‚С‡РµС‚С‹</div>
+        <div className="page-subtitle">РџСЂРѕРІРµСЂРєР° РѕС‚С‡РµС‚РѕРІ СЃС‚Р°Р¶РµСЂРѕРІ Рё РєРѕРЅС‚СЂРѕР»СЊ РїСЂРѕРіСЂРµСЃСЃР°</div>
       </div>
 
       {error && <div className="card" style={{ marginBottom: 12 }}><div className="card-body" style={{ color: '#b91c1c' }}>{error}</div></div>}
-      {loading && <div className="card"><div className="card-body">Загрузка...</div></div>}
+      {loading && <div className="card"><div className="card-body">Р—Р°РіСЂСѓР·РєР°...</div></div>}
 
       {!loading && (
         <div style={{ display: 'grid', gap: 14 }}>
           <div className="card">
-            <div className="card-header"><span className="card-title">Прогресс стажеров</span></div>
+            <div className="card-header"><span className="card-title">РџСЂРѕРіСЂРµСЃСЃ СЃС‚Р°Р¶РµСЂРѕРІ</span></div>
             <div className="card-body" style={{ display: 'grid', gap: 10 }}>
               {grouped.map((item) => {
                 const percent = item.total > 0 ? Math.round((item.done / item.total) * 100) : 0;
@@ -113,7 +113,7 @@ export default function AdminOnboarding() {
                   <div key={item.userId} style={{ border: '1px solid var(--gray-200)', borderRadius: 'var(--radius)', padding: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ fontWeight: 600 }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{item.done}/{item.total} дней принято</div>
+                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{item.done}/{item.total} РґРЅРµР№ РїСЂРёРЅСЏС‚Рѕ</div>
                     </div>
                     <div style={{ height: 7, background: 'var(--gray-200)', borderRadius: 999, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${percent}%`, background: percent === 100 ? '#16A34A' : '#2563EB' }} />
@@ -121,7 +121,7 @@ export default function AdminOnboarding() {
                   </div>
                 );
               })}
-              {grouped.length === 0 && <div style={{ color: 'var(--gray-500)' }}>Отчетов пока нет.</div>}
+              {grouped.length === 0 && <div style={{ color: 'var(--gray-500)' }}>РћС‚С‡РµС‚РѕРІ РїРѕРєР° РЅРµС‚.</div>}
             </div>
           </div>
 
@@ -130,28 +130,28 @@ export default function AdminOnboarding() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>СТАЖЕР</th>
-                    <th>ДЕНЬ</th>
-                    <th>ОБНОВЛЕНО</th>
-                    <th>СТАТУС</th>
-                    <th>ДЕЙСТВИЯ</th>
+                    <th>РЎРўРђР–Р•Р </th>
+                    <th>Р”Р•РќР¬</th>
+                    <th>РћР‘РќРћР’Р›Р•РќРћ</th>
+                    <th>РЎРўРђРўРЈРЎ</th>
+                    <th>Р”Р•Р™РЎРўР’РРЇ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reports.map((r) => (
                     <tr key={r.id}>
                       <td>{r.full_name || r.username || r.user_id}</td>
-                      <td>День {r.day_number}</td>
+                      <td>Р”РµРЅСЊ {r.day_number}</td>
                       <td>{String(r.updated_at || '').slice(0, 16).replace('T', ' ')}</td>
                       <td><span className={`badge ${STATUS[r.status]?.cls || 'badge-gray'}`}>{STATUS[r.status]?.label || r.status}</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn-icon" onClick={() => setSelected(r)} title="Просмотр"><Eye size={14} /></button>
+                          <button className="btn-icon" onClick={() => setSelected(r)} title="РџСЂРѕСЃРјРѕС‚СЂ"><Eye size={14} /></button>
                           {r.status === 'SENT' && (
                             <>
-                              <button className="btn-icon" style={{ color: 'var(--success)' }} onClick={() => review(r.id, 'ACCEPTED')} title="Принять"><CheckCircle size={14} /></button>
-                              <button className="btn-icon" style={{ color: 'var(--warning)' }} onClick={() => setSelected(r)} title="На доработку"><RotateCcw size={14} /></button>
-                              <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => review(r.id, 'REJECTED')} title="Отклонить"><XCircle size={14} /></button>
+                              <button className="btn-icon" style={{ color: 'var(--success)' }} onClick={() => review(r.id, 'ACCEPTED')} title="РџСЂРёРЅСЏС‚СЊ"><CheckCircle size={14} /></button>
+                              <button className="btn-icon" style={{ color: 'var(--warning)' }} onClick={() => setSelected(r)} title="РќР° РґРѕСЂР°Р±РѕС‚РєСѓ"><RotateCcw size={14} /></button>
+                              <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => review(r.id, 'REJECTED')} title="РћС‚РєР»РѕРЅРёС‚СЊ"><XCircle size={14} /></button>
                             </>
                           )}
                         </div>
@@ -159,7 +159,7 @@ export default function AdminOnboarding() {
                     </tr>
                   ))}
                   {reports.length === 0 && (
-                    <tr><td colSpan={5}>Отчетов пока нет.</td></tr>
+                    <tr><td colSpan={5}>РћС‚С‡РµС‚РѕРІ РїРѕРєР° РЅРµС‚.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -172,30 +172,30 @@ export default function AdminOnboarding() {
         <div className="modal-overlay" onClick={() => setSelected(null)}>
           <div className="modal" style={{ width: 680 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">Отчет: {selected.full_name || selected.username} · День {selected.day_number}</div>
+              <div className="modal-title">РћС‚С‡РµС‚: {selected.full_name || selected.username} В· Р”РµРЅСЊ {selected.day_number}</div>
               <button className="btn-icon" onClick={() => setSelected(null)}><X size={18} /></button>
             </div>
             <div className="modal-body">
-              <ViewBlock label="Что сделал" value={selected.did} />
-              <ViewBlock label="Что буду делать" value={selected.will_do} />
-              <ViewBlock label="Проблемы" value={selected.problems} />
+              <ViewBlock label="Р§С‚Рѕ СЃРґРµР»Р°Р»" value={selected.did} />
+              <ViewBlock label="Р§С‚Рѕ Р±СѓРґСѓ РґРµР»Р°С‚СЊ" value={selected.will_do} />
+              <ViewBlock label="РџСЂРѕР±Р»РµРјС‹" value={selected.problems} />
 
               <div style={{ border: '1px solid var(--gray-200)', borderRadius: 'var(--radius)', padding: 10, marginBottom: 12 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Детальный прогресс стажера</div>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Р”РµС‚Р°Р»СЊРЅС‹Р№ РїСЂРѕРіСЂРµСЃСЃ СЃС‚Р°Р¶РµСЂР°</div>
                 {progressLoading ? (
-                  <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>Загрузка...</div>
+                  <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>Р—Р°РіСЂСѓР·РєР°...</div>
                 ) : (
                   <>
                     <div style={{ fontSize: 12, color: 'var(--gray-600)', marginBottom: 8 }}>
-                      День: {progressDetails?.overview?.current_day_number || '-'} | Выполнено дней: {progressDetails?.overview?.completed_days || 0}/{progressDetails?.overview?.total_days || 0}
+                      Р”РµРЅСЊ: {progressDetails?.overview?.current_day_number || '-'} | Р’С‹РїРѕР»РЅРµРЅРѕ РґРЅРµР№: {progressDetails?.overview?.completed_days || 0}/{progressDetails?.overview?.total_days || 0}
                     </div>
                     <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid var(--gray-200)', borderRadius: 8, padding: 8 }}>
                       {(progressDetails?.regulations || []).map((item) => (
                         <div key={item.id} style={{ fontSize: 12, marginBottom: 6 }}>
-                          День {item.day_number} • {item.title} • шаг: {item.step} • тест: {item.quiz_score}/{item.quiz_total} • фидбек: {item.feedback ? 'да' : 'нет'}
+                          Р”РµРЅСЊ {item.day_number} вЂў {item.title} вЂў С€Р°Рі: {item.step} вЂў С‚РµСЃС‚: {item.quiz_score}/{item.quiz_total} вЂў С„РёРґР±РµРє: {item.feedback ? 'РґР°' : 'РЅРµС‚'}
                         </div>
                       ))}
-                      {(progressDetails?.regulations || []).length === 0 && <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Нет данных по регламентам.</div>}
+                      {(progressDetails?.regulations || []).length === 0 && <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>РќРµС‚ РґР°РЅРЅС‹С… РїРѕ СЂРµРіР»Р°РјРµРЅС‚Р°Рј.</div>}
                     </div>
                   </>
                 )}
@@ -203,20 +203,20 @@ export default function AdminOnboarding() {
 
               {selected.status === 'SENT' && (
                 <div className="form-group">
-                  <label className="form-label">Комментарий</label>
+                  <label className="form-label">РљРѕРјРјРµРЅС‚Р°СЂРёР№</label>
                   <textarea className="form-textarea" value={comment} onChange={(e) => setComment(e.target.value)} style={{ minHeight: 90 }} />
                 </div>
               )}
             </div>
             {selected.status === 'SENT' && (
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setSelected(null)}>Закрыть</button>
+                <button className="btn btn-secondary" onClick={() => setSelected(null)}>Р—Р°РєСЂС‹С‚СЊ</button>
                 <button className="btn btn-sm" style={{ background: '#FEF9C3', color: '#854D0E', border: '1px solid #FDE047' }} onClick={() => review(selected.id, 'REVISION')}>
-                  <RotateCcw size={13} /> На доработку
+                  <RotateCcw size={13} /> РќР° РґРѕСЂР°Р±РѕС‚РєСѓ
                 </button>
-                <button className="btn btn-danger btn-sm" onClick={() => review(selected.id, 'REJECTED')}>Отклонить</button>
+                <button className="btn btn-danger btn-sm" onClick={() => review(selected.id, 'REJECTED')}>РћС‚РєР»РѕРЅРёС‚СЊ</button>
                 <button className="btn btn-primary btn-sm" onClick={() => review(selected.id, 'ACCEPTED')}>
-                  <CheckCircle size={13} /> Принять
+                  <CheckCircle size={13} /> РџСЂРёРЅСЏС‚СЊ
                 </button>
               </div>
             )}
@@ -224,7 +224,7 @@ export default function AdminOnboarding() {
         </div>
       )}
 
-      {toast && <div className="toast toast-success"><div><div className="toast-title">Готово</div><div className="toast-msg">{toast}</div></div></div>}
+      {toast && <div className="toast toast-success"><div><div className="toast-title">Р“РѕС‚РѕРІРѕ</div><div className="toast-msg">{toast}</div></div></div>}
     </MainLayout>
   );
 }
@@ -234,7 +234,7 @@ function ViewBlock({ label, value }) {
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 13, color: 'var(--gray-700)', background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius)', padding: '10px 14px', lineHeight: 1.5 }}>
-        {value || '—'}
+        {value || 'вЂ”'}
       </div>
     </div>
   );

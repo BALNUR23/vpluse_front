@@ -12,6 +12,10 @@ export const regulationsAPI = {
   create: (data) => api.post('/content/regulations/', data),
   update: (id, data) => api.patch(`/content/regulations/${id}/`, data),
   delete: (id) => api.delete(`/content/regulations/${id}/`),
+  internOverview: () => api.get('/v1/regulations/intern/overview/'),
+  submitInternCompletion: () => api.post('/v1/regulations/intern/submit/'),
+  adminInternRequests: (params) => api.get('/v1/regulations/admin/intern-requests/', { params }),
+  approveInternRequest: (requestId, data) => api.post(`/v1/regulations/admin/intern-requests/${requestId}/approve/`, data || {}),
   markRead: (id) => api.post(`/v1/regulations/${id}/read/`),
   sendFeedback: (id, data) => api.post(`/v1/regulations/${id}/feedback/`, data),
   submitQuiz: (id, data) => api.post(`/v1/regulations/${id}/quiz/`, data),
@@ -59,6 +63,7 @@ export const schedulesAPI = {
 export const attendanceAPI = {
   getMy: (params) => api.get('/v1/attendance/my/', { params }),
   getTeam: (params) => api.get('/v1/attendance/team/', { params }),
+  checkinsReport: (params) => api.get('/v1/attendance/checkins-report/', { params }),
   mark: (data) => api.post('/v1/attendance/mark/', data),
   officeCheckIn: (data) => api.post('/v1/attendance/check-in/', data),
 };
@@ -90,13 +95,18 @@ export const companyAPI = {
   org: (params) => api.get('/v1/accounts/org/structure/', { params }),
 };
 
+export const notificationsAPI = {
+  list: (params) => api.get('/v1/common/notifications/', { params }),
+  markRead: (id) => api.patch(`/v1/common/notifications/${id}/read/`),
+  markAllRead: () => api.patch('/v1/common/notifications/read-all/'),
+};
+
 export const payrollAPI = {
   my: (params) => api.get('/v1/payroll/', { params }),
   adminList: (params) => api.get('/v1/payroll/admin/', { params }),
   generate: (data) => api.post('/v1/payroll/admin/generate/', data),
+  setPeriodStatus: (periodId, data) => api.patch(`/v1/payroll/admin/periods/${periodId}/status/`, data),
   salaryProfiles: () => api.get('/v1/payroll/admin/salary-profiles/'),
   createSalaryProfile: (data) => api.post('/v1/payroll/admin/salary-profiles/', data),
   updateSalaryProfile: (id, data) => api.patch(`/v1/payroll/admin/salary-profiles/${id}/`, data),
 };
-
-
