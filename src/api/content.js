@@ -1,106 +1,112 @@
-import api from './axios';
-
-async function requestWithFallback(requests) {
-  let lastError;
-  for (const run of requests) {
-    try {
-      return await run();
-    } catch (err) {
-      const status = err?.response?.status;
-      lastError = err;
-      if (status !== 404) throw err;
-    }
-  }
-  throw lastError;
-}
+﻿import api from './axios';
 
 export const newsAPI = {
-  list: () => api.get('/v1/core/news/'),
-  create: (data) => api.post('/v1/core/news/', data),
-  update: (id, data) => api.patch(`/v1/core/news/${id}/`, data),
-  delete: (id) => api.delete(`/v1/core/news/${id}/`),
+  list: () => api.get('/core/news/'),
+  create: (data) => api.post('/core/news/', data),
+  update: (id, data) => api.patch(`/core/news/${id}/`, data),
+  delete: (id) => api.delete(`/core/news/${id}/`),
 };
 
 export const regulationsAPI = {
-  list: (params) => api.get('/v1/content/regulations/', { params }),
-  detail: (id) =>
-    requestWithFallback([
-      () => api.get(`/v1/content/regulations/${id}/`),
-      () => api.get(`/v1/content/regulations/${id}`),
-    ]),
-  create: (data) => api.post('/v1/content/regulations/', data),
-  update: (id, data) => api.patch(`/v1/content/regulations/${id}/`, data),
-  delete: (id) => api.delete(`/v1/content/regulations/${id}/`),
-  acknowledge: (id, data = {}) =>
-    requestWithFallback([
-      () => api.post(`/v1/content/regulations/${id}/acknowledge/`, data),
-      () => api.post(`/v1/content/regulations/${id}/acknowledge`, data),
-      () => api.post(`/v1/content/regulations/${id}/mark-read/`, data),
-      () => api.post(`/v1/content/regulations/${id}/mark-read`, data),
-    ]),
-  submitFeedback: (id, data) =>
-    requestWithFallback([
-      () => api.post(`/v1/content/regulations/${id}/feedback/`, data),
-      () => api.post(`/v1/content/regulations/${id}/feedback`, data),
-    ]),
-  submitQuiz: (id, data) =>
-    requestWithFallback([
-      () => api.post(`/v1/content/regulations/${id}/quiz/`, data),
-      () => api.post(`/v1/content/regulations/${id}/quiz`, data),
-      () => api.post(`/v1/content/regulations/${id}/test/`, data),
-      () => api.post(`/v1/content/regulations/${id}/test`, data),
-    ]),
-  submitReadReport: (id, data) =>
-    requestWithFallback([
-      () => api.post(`/v1/content/regulations/${id}/read-report/`, data),
-      () => api.post(`/v1/content/regulations/${id}/read-report`, data),
-      () => api.post(`/v1/content/regulations/${id}/report/`, data),
-      () => api.post(`/v1/content/regulations/${id}/report`, data),
-    ]),
+  list: (params) => api.get('/content/regulations/', { params }),
+  create: (data) => api.post('/content/regulations/', data),
+  update: (id, data) => api.patch(`/content/regulations/${id}/`, data),
+  delete: (id) => api.delete(`/content/regulations/${id}/`),
+  internOverview: () => api.get('/v1/regulations/intern/overview/'),
+  submitInternCompletion: () => api.post('/v1/regulations/intern/submit/'),
+  adminInternRequests: (params) => api.get('/v1/regulations/admin/intern-requests/', { params }),
+  approveInternRequest: (requestId, data) => api.post(`/v1/regulations/admin/intern-requests/${requestId}/approve/`, data || {}),
+  markRead: (id) => api.post(`/v1/regulations/${id}/read/`),
+  sendFeedback: (id, data) => api.post(`/v1/regulations/${id}/feedback/`, data),
+  submitQuiz: (id, data) => api.post(`/v1/regulations/${id}/quiz/`, data),
+  acknowledge: (id) => api.post(`/v1/regulations/${id}/acknowledge/`),
 };
 
 export const instructionsAPI = {
-  list: () => api.get('/v1/content/instructions/'),
+  list: () => api.get('/content/instructions/'),
+  create: (data) => api.post('/content/instructions/', data),
+  update: (id, data) => api.patch(`/content/instructions/${id}/`, data),
+  delete: (id) => api.delete(`/content/instructions/${id}/`),
 };
 
 export const onboardingAPI = {
-  getMy: () => api.get('/v1/onboarding/my/'),
-  submitReport: (data) => api.post('/v1/onboarding/reports/', data),
-  updateReport: (id, data) => api.patch(`/v1/onboarding/reports/${id}/`, data),
-  getReports: (params) => api.get('/v1/onboarding/reports/', { params }),
-  reviewReport: (id, data) => api.post(`/v1/onboarding/reports/${id}/review/`, data),
+  getMy: () => api.get('/onboarding/my/'),
+  listDays: () => api.get('/v1/onboarding/days/'),
+  getDay: (id) => api.get(`/v1/onboarding/days/${id}/`),
+  completeDay: (id) => api.post(`/v1/onboarding/days/${id}/complete/`),
+  getInternRole: () => api.get('/v1/accounts/me/intern-role/'),
+  setInternRole: (subdivision_id) => api.post('/v1/accounts/me/intern-role/', { subdivision_id }),
+  submitReport: (data) => api.post('/onboarding/reports/', data),
+  updateReport: (id, data) => api.patch(`/onboarding/reports/${id}/`, data),
+  getReports: (params) => api.get('/onboarding/reports/', { params }),
+  reviewReport: (id, data) => api.post(`/onboarding/reports/${id}/review/`, data),
+  getInternProgress: (userId) => api.get(`/v1/onboarding/progress/${userId}/detail/`),
 };
 
 export const schedulesAPI = {
-  getWorkSchedules: () => api.get('/v1/schedules/work-schedules/'),
-  getMine: () => api.get('/v1/schedules/user-schedules/mine/'),
-  getHolidays: (year) => api.get('/v1/schedules/holidays/', { params: { year } }),
+  getWorkSchedules: () => api.get('/schedules/work-schedules/'),
+  getMine: () => api.get('/schedules/user-schedules/mine/'),
+  getHolidays: (year) => api.get('/schedules/holidays/', { params: { year } }),
+  select: (scheduleId) => api.post('/v1/work-schedules/select/', { schedule_id: scheduleId }),
+  weeklyPlanSubmit: (data) => api.post('/v1/work-schedules/weekly-plans/my/', data),
+  adminTemplates: () => api.get('/v1/work-schedules/admin/templates/'),
+  adminCreateTemplate: (data) => api.post('/v1/work-schedules/admin/templates/', data),
+  adminUpdateTemplate: (id, data) => api.patch(`/v1/work-schedules/admin/templates/${id}/`, data),
+  adminRequests: (params) => api.get('/v1/work-schedules/admin/requests/', { params }),
+  adminRequestDecision: (id, approved) => api.post(`/v1/work-schedules/admin/requests/${id}/decision/`, { approved }),
+  adminAssign: (data) => api.post('/v1/work-schedules/admin/assign/', data),
+  weeklyPlansMy: () => api.get('/v1/work-schedules/weekly-plans/my/'),
+  weeklyPlansAdmin: (params) => api.get('/v1/work-schedules/admin/weekly-plans/', { params }),
+  weeklyPlanDecision: (id, data) => api.post(`/v1/work-schedules/admin/weekly-plans/${id}/decision/`, data),
+};
+
+export const attendanceAPI = {
+  getMy: (params) => api.get('/v1/attendance/my/', { params }),
+  getTeam: (params) => api.get('/v1/attendance/team/', { params }),
+  checkinsReport: (params) => api.get('/v1/attendance/checkins-report/', { params }),
+  mark: (data) => api.post('/v1/attendance/mark/', data),
+  officeCheckIn: (data) => api.post('/v1/attendance/check-in/', data),
 };
 
 export const feedbackAPI = {
-  list: () =>
-    requestWithFallback([
-      () => api.get('/v1/feedback/tickets/'),
-      () => api.get('/v1/feedback/tickets'),
-      () => api.get('/v1/feedback/'),
-      () => api.get('/v1/feedback'),
-    ]),
-  create: (data) =>
-    requestWithFallback([
-      () => api.post('/v1/feedback/tickets/', data),
-      () => api.post('/v1/feedback/tickets', data),
-      () => api.post('/v1/feedback/', data),
-      () => api.post('/v1/feedback', data),
-    ]),
-  reply: (id, data) =>
-    requestWithFallback([
-      () => api.post(`/v1/feedback/tickets/${id}/reply/`, data),
-      () => api.post(`/v1/feedback/tickets/${id}/reply`, data),
-      () => api.post(`/v1/feedback/${id}/reply/`, data),
-      () => api.post(`/v1/feedback/${id}/reply`, data),
-    ]),
+  list: () => api.get('/feedback/tickets/'),
+  create: (data) => api.post('/feedback/tickets/', data),
+  reply: (id, data) => api.post(`/feedback/tickets/${id}/reply/`, data),
 };
 
 export const auditAPI = {
-  list: (params) => api.get('/v1/core/audit/', { params }),
+  list: (params) => api.get('/core/audit/', { params }),
+};
+
+export const tasksAPI = {
+  my: () => api.get('/v1/tasks/my/'),
+  team: () => api.get('/v1/tasks/team/'),
+  assignees: () => api.get('/v1/tasks/assignees/'),
+  create: (data) => api.post('/v1/tasks/create/', data),
+  detail: (id) => api.get(`/v1/tasks/${id}/`),
+  update: (id, data) => api.patch(`/v1/tasks/${id}/`, data),
+  move: (id, column_id) => api.patch(`/v1/tasks/${id}/move/`, { column_id }),
+  dailyReports: (params) => api.get('/v1/reports/employee/daily/', { params }),
+  submitDailyReport: (data) => api.post('/v1/reports/employee/daily/', data),
+};
+
+export const companyAPI = {
+  structure: () => api.get('/v1/accounts/company/structure/'),
+  org: (params) => api.get('/v1/accounts/org/structure/', { params }),
+};
+
+export const notificationsAPI = {
+  list: (params) => api.get('/v1/common/notifications/', { params }),
+  markRead: (id) => api.patch(`/v1/common/notifications/${id}/read/`),
+  markAllRead: () => api.patch('/v1/common/notifications/read-all/'),
+};
+
+export const payrollAPI = {
+  my: (params) => api.get('/v1/payroll/', { params }),
+  adminList: (params) => api.get('/v1/payroll/admin/', { params }),
+  generate: (data) => api.post('/v1/payroll/admin/generate/', data),
+  setPeriodStatus: (periodId, data) => api.patch(`/v1/payroll/admin/periods/${periodId}/status/`, data),
+  salaryProfiles: () => api.get('/v1/payroll/admin/salary-profiles/'),
+  createSalaryProfile: (data) => api.post('/v1/payroll/admin/salary-profiles/', data),
+  updateSalaryProfile: (id, data) => api.patch(`/v1/payroll/admin/salary-profiles/${id}/`, data),
 };

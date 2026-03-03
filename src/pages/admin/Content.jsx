@@ -1,579 +1,477 @@
-﻿import MainLayout from '../../layouts/MainLayout';
-import { CONTENT_MODULES } from '../../data/mockData';
-import { useEffect, useRef, useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Link, Upload, ChevronRight, ClipboardCheck } from 'lucide-react';
-import { regulationsAPI } from '../../api/content';
+import { useEffect, useMemo, useState } from 'react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import MainLayout from '../../layouts/MainLayout';
+import { instructionsAPI, newsAPI, regulationsAPI } from '../../api/content';
 
-const MODULE_STORAGE_PREFIX = 'vpluse_admin_content_module_v1_';
-
-function todayLabel() {
-  try {
-    return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date());
-  } catch {
-    return 'today';
-  }
-}
-
-function getDefaultModuleItems(module) {
-  return [
-    { id: 1, title: `${module.title}: материал 1`, desc: 'Текущая запись модуля', date: '27 фев. 2026' },
-    { id: 2, title: `${module.title}: материал 2`, desc: 'Текущая запись модуля', date: '26 фев. 2026' },
-  ];
-}
-
-function loadModuleItems(module) {
-  const key = `${MODULE_STORAGE_PREFIX}${module.id}`;
-  try {
-    const raw = localStorage.getItem(key);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (Array.isArray(parsed)) return parsed;
-  } catch {
-    // ignore broken localStorage
-  }
-  return getDefaultModuleItems(module);
-}
-
-function saveModuleItems(moduleId, items) {
-  localStorage.setItem(`${MODULE_STORAGE_PREFIX}${moduleId}`, JSON.stringify(items));
-}
-
-function safeList(data) {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.results)) return data.results;
-  return [];
-}
-
-function humanFileLabel(fileName = '') {
-  const ext = String(fileName).split('.').pop()?.toUpperCase();
-  if (!ext || ext === fileName.toUpperCase()) return 'Файл';
-  if (ext === 'PDF') return 'PDF';
-  if (ext === 'DOC' || ext === 'DOCX') return 'DOCX';
-  if (ext === 'PNG' || ext === 'JPG' || ext === 'JPEG' || ext === 'WEBP') return 'Изображение';
-  return ext;
-}
-
-function normalizeDoc(raw) {
-  const title = raw.title || raw.name || raw.file_name || raw.filename || 'Без названия';
-  const desc = raw.description || raw.desc || raw.summary || '';
-  const fileUrl = raw.file || raw.file_url || raw.document || '';
-  const externalUrl = raw.external_url || raw.url || '';
-  const typeRaw = String(raw.type || raw.kind || '').toLowerCase();
-  const isLink = typeRaw.includes('link') || (!fileUrl && Boolean(externalUrl));
-  const format = isLink ? 'Внешняя ссылка' : humanFileLabel(fileUrl || raw.file_name || title);
-  const dateRaw = raw.updated_at || raw.modified || raw.created_at || raw.date;
-  const date = dateRaw ? new Date(dateRaw).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }) : todayLabel();
-
-  return {
-    id: raw.id,
-    title,
-    desc: desc || externalUrl || '',
-    format,
-    date,
-    href: externalUrl || fileUrl || '',
-    quizRequired: Boolean(raw.quiz_required),
-    quizQuestion: raw.quiz_question || raw.quiz?.question || '',
-    quizOptions: Array.isArray(raw.quiz_options)
-      ? raw.quiz_options
-      : Array.isArray(raw.quiz?.options)
-        ? raw.quiz.options
-        : [],
-  };
-}
+const emptyNews = { title: '', full_text: '', language: 'ru' };
+const createEmptyQuizQuestion = () => ({ question: '', options: ['', ''], correct_answer: '' });
+const emptyReg = {
+  title: '',
+  description: '',
+  type: 'link',
+  url: '',
+  quiz_allowed_mistakes: 1,
+  quiz_questions: [],
+};
+const emptyInstruction = { language: 'ru', type: 'text', content: '', is_active: true };
 
 export default function AdminContent() {
-  const [view, setView] = useState('hub');
-  const normalizedView = view === 'regs' ? 'regulations' : view;
-  const selectedModule =
-    CONTENT_MODULES.find((m) => m.id === view) ||
-    CONTENT_MODULES.find((m) => m.id === normalizedView) ||
-    null;
-
-  if (normalizedView === 'regulations') {
-    return <RegulationsManage onBack={() => setView('hub')} />;
-  }
-
-  if (selectedModule) {
-    return <GenericModuleManage module={selectedModule} onBack={() => setView('hub')} />;
-  }
-
-  return (
-    <MainLayout title="Администрирование">
-      <div className="page-header">
-        <div className="page-title">Управление контентом</div>
-        <div className="page-subtitle">Редактирование информации на страницах платформы</div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {CONTENT_MODULES.map((mod) => (
-          <div
-            key={mod.id}
-            className="card"
-            style={{ cursor: 'pointer', transition: 'all 0.15s' }}
-            onClick={() => setView(mod.id === 'regs' ? 'regulations' : mod.id)}
-          >
-            <div className="card-body">
-              <div
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 'var(--radius-lg)',
-                  background: mod.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 24,
-                  marginBottom: 14,
-                }}
-              >
-                {mod.icon}
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{mod.title}</div>
-              <p style={{ fontSize: 12, color: 'var(--gray-500)', lineHeight: 1.6, marginBottom: 14 }}>{mod.desc}</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: mod.id === 'welcome' ? 'var(--gray-500)' : mod.id === 'instruction' ? 'var(--success)' : 'var(--primary)',
-                    fontWeight: 500,
-                  }}
-                >
-                  {mod.stat}
-                </span>
-                <span style={{ fontSize: 13, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                  {mod.link} <ChevronRight size={13} />
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </MainLayout>
-  );
-}
-
-function GenericModuleManage({ module, onBack }) {
-  const [items, setItems] = useState(() => loadModuleItems(module));
-  const [search, setSearch] = useState('');
-  const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ title: '', desc: '' });
-  const [status, setStatus] = useState('');
-
-  useEffect(() => {
-    setItems(loadModuleItems(module));
-    setSearch('');
-    setEditId(null);
-    setForm({ title: '', desc: '' });
-    setStatus('');
-  }, [module]);
-
-  useEffect(() => {
-    saveModuleItems(module.id, items);
-  }, [module.id, items]);
-
-  const filtered = items.filter((d) => !search || d.title.toLowerCase().includes(search.toLowerCase()));
-
-  const openCreate = () => {
-    setEditId(null);
-    setForm({ title: '', desc: '' });
-    setStatus('Режим: новая запись');
-  };
-
-  const openEdit = (row) => {
-    setEditId(row.id);
-    setForm({ title: row.title, desc: row.desc || '' });
-    setStatus(`Редактирование записи #${row.id}`);
-  };
-
-  const save = () => {
-    if (!form.title.trim()) {
-      setStatus('Введите название записи');
-      return;
-    }
-
-    const date = todayLabel();
-    if (editId) {
-      setItems((prev) => prev.map((x) => (x.id === editId ? { ...x, title: form.title.trim(), desc: form.desc.trim(), date } : x)));
-      setStatus('Изменения сохранены');
-      return;
-    }
-
-    setItems((prev) => [{ id: Date.now(), title: form.title.trim(), desc: form.desc.trim(), date }, ...prev]);
-    setStatus('Новая запись сохранена');
-  };
-
-  const remove = (id) => {
-    setItems((prev) => prev.filter((x) => x.id !== id));
-    if (editId === id) {
-      setEditId(null);
-      setForm({ title: '', desc: '' });
-    }
-    setStatus('Запись удалена');
-  };
-
-  return (
-    <MainLayout title="Управление контентом">
-      <div style={{ marginBottom: 16 }}>
-        <button
-          onClick={onBack}
-          style={{ fontSize: 13, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-        >
-          ← Контент
-        </button>
-      </div>
-      <div className="page-header">
-        <div>
-          <div className="page-title">{module.title}</div>
-          <div className="page-subtitle">{module.desc}</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-outline btn-sm" onClick={openCreate}>
-            <Plus size={13} /> Добавить запись
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={save}>
-            Сохранить
-          </button>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-body" style={{ display: 'grid', gap: 10 }}>
-          <input className="form-input" placeholder="Название" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-          <textarea className="form-textarea" placeholder="Описание" value={form.desc} onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))} />
-          {status && <div style={{ fontSize: 12, color: status === 'Введите название записи' ? 'var(--danger)' : 'var(--gray-500)' }}>{status}</div>}
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-body" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
-            <input className="form-input" style={{ paddingLeft: 32 }} placeholder="Поиск по названию..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <span style={{ fontSize: 13, color: 'var(--gray-500)', flexShrink: 0 }}>{filtered.length} записей</span>
-        </div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>ЗАПИСЬ</th>
-                <th>ОПИСАНИЕ</th>
-                <th>ОБНОВЛЕНО</th>
-                <th>ДЕЙСТВИЯ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((row) => (
-                <tr key={row.id}>
-                  <td style={{ fontWeight: 600 }}>{row.title}</td>
-                  <td style={{ color: 'var(--gray-500)' }}>{row.desc || '—'}</td>
-                  <td style={{ color: 'var(--gray-500)' }}>{row.date}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="btn-icon" onClick={() => openEdit(row)}>
-                        <Pencil size={13} />
-                      </button>
-                      <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => remove(row.id)}>
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </MainLayout>
-  );
-}
-
-function RegulationsManage({ onBack }) {
-  const [docs, setDocs] = useState([]);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
+  const [tab, setTab] = useState('news');
+  const [news, setNews] = useState([]);
+  const [regs, setRegs] = useState([]);
+  const [instructions, setInstructions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const fileInputRef = useRef(null);
+  const [error, setError] = useState('');
 
-  const loadDocs = async () => {
+  const [newsForm, setNewsForm] = useState(emptyNews);
+  const [newsEditId, setNewsEditId] = useState(null);
+  const [newsImage, setNewsImage] = useState(null);
+
+  const [regForm, setRegForm] = useState(emptyReg);
+  const [regEditId, setRegEditId] = useState(null);
+  const [regFile, setRegFile] = useState(null);
+
+  const [instructionForm, setInstructionForm] = useState(emptyInstruction);
+  const [instructionEditId, setInstructionEditId] = useState(null);
+
+  const load = async () => {
     setLoading(true);
+    setError('');
     try {
-      const res = await regulationsAPI.list();
-      setDocs(safeList(res.data).map(normalizeDoc));
-    } catch (err) {
-      setStatus(err?.response?.data?.detail || 'Не удалось загрузить регламенты');
-      setDocs([]);
+      const [newsRes, regRes, instructionsRes] = await Promise.all([
+        newsAPI.list(),
+        regulationsAPI.list(),
+        instructionsAPI.list(),
+      ]);
+      setNews(Array.isArray(newsRes.data) ? newsRes.data : []);
+      setRegs(Array.isArray(regRes.data) ? regRes.data : []);
+      setInstructions(Array.isArray(instructionsRes.data) ? instructionsRes.data : []);
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Не удалось загрузить контент.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDocs();
+    load();
   }, []);
 
-  const filtered = docs.filter((d) => !search || d.title.toLowerCase().includes(search.toLowerCase()));
+  const stats = useMemo(() => ({
+    news: news.length,
+    regs: regs.length,
+    instructions: instructions.length,
+  }), [news, regs, instructions]);
 
-  const addLink = async () => {
-    const url = window.prompt('Введите ссылку');
-    if (!url?.trim()) return;
-    const name = window.prompt('Название ссылки') || url;
-    const description = window.prompt('Описание (необязательно)') || '';
-
-    setSubmitting(true);
+  const saveNews = async () => {
+    if (!newsForm.title.trim()) return;
+    const payload = new FormData();
+    payload.append('title', newsForm.title);
+    payload.append('full_text', newsForm.full_text || '');
+    payload.append('language', newsForm.language || 'ru');
+    payload.append('published_at', new Date().toISOString());
+    payload.append('is_active', 'true');
+    if (newsImage) payload.append('image', newsImage);
     try {
-      await regulationsAPI.create({ title: name.trim(), description: description.trim(), type: 'link', external_url: url.trim() });
-      setStatus('Ссылка добавлена');
-      await loadDocs();
-    } catch (err) {
-      setStatus(err?.response?.data?.detail || 'Не удалось добавить ссылку');
-    } finally {
-      setSubmitting(false);
+      if (newsEditId) await newsAPI.update(newsEditId, payload);
+      else await newsAPI.create(payload);
+      setNewsForm(emptyNews);
+      setNewsEditId(null);
+      setNewsImage(null);
+      await load();
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Ошибка сохранения новости.');
     }
   };
 
-  const onPickFile = () => {
-    fileInputRef.current?.click();
-  };
-
-  const onFileSelected = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-
-    const title = window.prompt('Название документа', file.name.replace(/\.[^.]+$/, '')) || file.name;
-    const description = window.prompt('Описание (необязательно)') || '';
-
-    const formData = new FormData();
-    formData.append('title', title.trim());
-    formData.append('description', description.trim());
-    formData.append('type', 'file');
-    formData.append('file', file);
-
-    setSubmitting(true);
-    try {
-      await regulationsAPI.create(formData);
-      setStatus(`Файл «${file.name}» загружен`);
-      await loadDocs();
-    } catch (err) {
-      setStatus(err?.response?.data?.detail || 'Не удалось загрузить файл');
-    } finally {
-      setSubmitting(false);
+  const saveReg = async () => {
+    if (!regForm.title.trim()) return;
+    if (regForm.type === 'file' && !regEditId && !regFile) {
+      setError('Выберите файл перед добавлением регламента.');
+      return;
     }
-  };
 
-  const editDoc = async (doc) => {
-    const nextTitle = window.prompt('Название', doc.title);
-    if (!nextTitle?.trim()) return;
-    const nextDesc = window.prompt('Описание', doc.desc || '') || '';
+    const normalizedQuizQuestions = (regForm.quiz_questions || [])
+      .map((item) => ({
+        question: String(item.question || '').trim(),
+        options: (item.options || []).map((opt) => String(opt || '').trim()).filter(Boolean),
+        correct_answer: String(item.correct_answer || '').trim(),
+      }))
+      .filter((item) => item.question && item.options.length >= 2 && item.correct_answer);
 
-    setSubmitting(true);
-    try {
-      await regulationsAPI.update(doc.id, { title: nextTitle.trim(), description: nextDesc.trim() });
-      setStatus('Документ обновлен');
-      await loadDocs();
-    } catch (err) {
-      setStatus(err?.response?.data?.detail || 'Не удалось обновить документ');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    const payload = new FormData();
+    payload.append('title', regForm.title);
+    payload.append('description', regForm.description || '');
+    payload.append('type', regForm.type);
+    payload.append('is_active', 'true');
+    payload.append('quiz_allowed_mistakes', String(Math.max(Number(regForm.quiz_allowed_mistakes || 0), 0)));
+    payload.append('quiz_questions', JSON.stringify(normalizedQuizQuestions));
+    payload.append('quiz_question', '');
+    payload.append('quiz_expected_answer', '');
 
-  const editQuiz = async (doc) => {
-    const enabledDefault = doc.quizRequired ? 'да' : 'нет';
-    const enabledInput = window.prompt('Включить мини-тест для стажеров? (да/нет)', enabledDefault);
-    if (enabledInput === null) return;
-    const enabled = String(enabledInput).trim().toLowerCase();
-    const quizRequired = enabled === 'да' || enabled === 'yes' || enabled === 'y' || enabled === 'true' || enabled === '1';
-
-    let payload = { quiz_required: quizRequired };
-    if (quizRequired) {
-      const question = window.prompt('Вопрос теста', doc.quizQuestion || '');
-      if (!question?.trim()) {
-        setStatus('Вопрос теста обязателен');
-        return;
-      }
-      const optionsDefault = (doc.quizOptions || []).join(' ; ');
-      const optionsRaw = window.prompt('Варианты ответа через ; (минимум 2)', optionsDefault);
-      if (!optionsRaw?.trim()) {
-        setStatus('Добавьте варианты ответа');
-        return;
-      }
-      const options = optionsRaw
-        .split(';')
-        .map((x) => x.trim())
-        .filter(Boolean);
-      if (options.length < 2) {
-        setStatus('Нужно минимум 2 варианта ответа');
-        return;
-      }
-      const answer = window.prompt('Правильный ответ (точно как один из вариантов)', options[0] || '');
-      if (!answer?.trim()) {
-        setStatus('Правильный ответ обязателен');
-        return;
-      }
-
-      payload = {
-        ...payload,
-        quiz_question: question.trim(),
-        quiz_options: options,
-        quiz_expected_answer: answer.trim(),
-      };
+    if (regForm.type === 'link') {
+      payload.append('external_url', regForm.url || '');
     } else {
-      payload = {
-        ...payload,
-        quiz_question: '',
-        quiz_options: [],
-      };
+      payload.append('external_url', '');
+      if (regFile) payload.append('file', regFile);
     }
 
-    setSubmitting(true);
     try {
-      await regulationsAPI.update(doc.id, payload);
-      setStatus(quizRequired ? 'Мини-тест обновлен' : 'Мини-тест отключен');
-      await loadDocs();
-    } catch (err) {
-      setStatus(err?.response?.data?.detail || 'Не удалось сохранить настройки мини-теста');
-    } finally {
-      setSubmitting(false);
+      if (regEditId) await regulationsAPI.update(regEditId, payload);
+      else await regulationsAPI.create(payload);
+      setRegForm(emptyReg);
+      setRegEditId(null);
+      setRegFile(null);
+      await load();
+    } catch (e) {
+      const detail = e.response?.data;
+      if (detail?.file?.[0]) setError(detail.file[0]);
+      else setError(e.response?.data?.detail || 'Ошибка сохранения регламента.');
     }
   };
 
-  const removeDoc = async (id) => {
-    if (!window.confirm('Удалить документ?')) return;
-
-    setSubmitting(true);
+  const saveInstruction = async () => {
+    const content = (instructionForm.content || '').trim();
+    if (!content) return;
+    const payload = {
+      language: instructionForm.language,
+      type: instructionForm.type,
+      content,
+      is_active: true,
+    };
     try {
-      await regulationsAPI.delete(id);
-      setStatus('Документ удален');
-      await loadDocs();
-    } catch (err) {
-      setStatus(err?.response?.data?.detail || 'Не удалось удалить документ');
-    } finally {
-      setSubmitting(false);
+      if (instructionEditId) await instructionsAPI.update(instructionEditId, payload);
+      else await instructionsAPI.create(payload);
+      setInstructionForm(emptyInstruction);
+      setInstructionEditId(null);
+      await load();
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Ошибка сохранения инструкции.');
     }
+  };
+
+  const updateQuizQuestion = (qIdx, patch) => {
+    setRegForm((f) => ({
+      ...f,
+      quiz_questions: (f.quiz_questions || []).map((item, idx) => (idx === qIdx ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const updateQuizOption = (qIdx, oIdx, value) => {
+    setRegForm((f) => ({
+      ...f,
+      quiz_questions: (f.quiz_questions || []).map((item, idx) => {
+        if (idx !== qIdx) return item;
+        const nextOptions = [...(item.options || [])];
+        nextOptions[oIdx] = value;
+        return { ...item, options: nextOptions };
+      }),
+    }));
   };
 
   return (
-    <MainLayout title="Управление контентом">
-      <div style={{ marginBottom: 16 }}>
-        <button
-          onClick={onBack}
-          style={{ fontSize: 13, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-        >
-          ← Контент
-        </button>
-      </div>
+    <MainLayout title="Администрирование">
       <div className="page-header">
         <div>
-          <div className="page-title">Регламенты и база знаний</div>
-          <div className="page-subtitle">Загрузка документов, добавление внешних ссылок на регламенты.</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-outline btn-sm" onClick={addLink} disabled={submitting}>
-            <Link size={13} /> Добавить ссылку
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={onPickFile} disabled={submitting}>
-            <Upload size={13} /> Загрузить файл
-          </button>
-          <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={onFileSelected} />
+          <div className="page-title">Управление контентом</div>
+          <div className="page-subtitle">Новости, регламенты и инструкции</div>
         </div>
       </div>
 
-      {status && <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--gray-500)' }}>{status}</div>}
+      {error && <div className="card" style={{ marginBottom: 12 }}><div className="card-body" style={{ color: '#b91c1c' }}>{error}</div></div>}
+      {loading && <div className="card"><div className="card-body">Загрузка...</div></div>}
 
-      <div className="card">
-        <div className="card-body" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
-            <input className="form-input" style={{ paddingLeft: 32 }} placeholder="Поиск по названию..." value={search} onChange={(e) => setSearch(e.target.value)} />
+      {!loading && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 14 }}>
+            <Stat title="Новости" value={stats.news} />
+            <Stat title="Регламенты" value={stats.regs} />
+            <Stat title="Инструкции" value={stats.instructions} />
           </div>
-          <span style={{ fontSize: 13, color: 'var(--gray-500)', flexShrink: 0 }}>{loading ? 'Загрузка...' : `${filtered.length} документов`}</span>
-          <button className="btn btn-secondary btn-sm">Фильтры</button>
-        </div>
 
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>НАЗВАНИЕ ДОКУМЕНТА</th>
-                <th>ФОРМАТ</th>
-                <th>ДАТА ИЗМЕНЕНИЯ</th>
-                <th>ДЕЙСТВИЯ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={4} style={{ color: 'var(--gray-500)' }}>
-                    Загрузка...
-                  </td>
-                </tr>
-              )}
+          <div className="tabs">
+            <button className={`tab-btn ${tab === 'news' ? 'active' : ''}`} onClick={() => setTab('news')}>Новости</button>
+            <button className={`tab-btn ${tab === 'regulations' ? 'active' : ''}`} onClick={() => setTab('regulations')}>Регламенты</button>
+            <button className={`tab-btn ${tab === 'instructions' ? 'active' : ''}`} onClick={() => setTab('instructions')}>Инструкции</button>
+          </div>
 
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={4} style={{ color: 'var(--gray-500)' }}>
-                    Документов пока нет
-                  </td>
-                </tr>
-              )}
+          {tab === 'news' && (
+            <>
+              <div className="card" style={{ marginBottom: 12 }}>
+                <div className="card-body" style={{ display: 'grid', gap: 10 }}>
+                  <input className="form-input" placeholder="Заголовок" value={newsForm.title} onChange={(e) => setNewsForm((f) => ({ ...f, title: e.target.value }))} />
+                  <textarea className="form-textarea" placeholder="Текст новости" value={newsForm.full_text} onChange={(e) => setNewsForm((f) => ({ ...f, full_text: e.target.value }))} />
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <input className="form-input" type="file" accept="image/*" onChange={(e) => setNewsImage(e.target.files?.[0] || null)} />
+                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{newsImage ? `Выбрано изображение: ${newsImage.name}` : 'Изображение не выбрано'}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary btn-sm" onClick={saveNews}><Plus size={13} /> {newsEditId ? 'Сохранить' : 'Добавить'}</button>
+                    {newsEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setNewsEditId(null); setNewsForm(emptyNews); setNewsImage(null); }}>Отмена</button>}
+                  </div>
+                </div>
+              </div>
+              <DataTable
+                rows={news}
+                columns={[{ key: 'title', label: 'ЗАГОЛОВОК' }, { key: 'published_at', label: 'ДАТА' }]}
+                onEdit={(item) => {
+                  setNewsEditId(item.id);
+                  setNewsForm({ title: item.title || '', full_text: item.full_text || '', language: item.language || 'ru' });
+                  setNewsImage(null);
+                }}
+                onDelete={async (item) => {
+                  await newsAPI.delete(item.id);
+                  await load();
+                }}
+              />
+            </>
+          )}
 
-              {!loading &&
-                filtered.map((doc) => (
-                  <tr key={doc.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 6,
-                            background: doc.format.includes('ссылка') ? '#EDE9FE' : doc.format.includes('PDF') ? '#FEE2E2' : '#DBEAFE',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <span style={{ fontSize: 14 }}>{doc.format.includes('ссылка') ? '🔗' : '📄'}</span>
+          {tab === 'regulations' && (
+            <>
+              <div className="card" style={{ marginBottom: 12 }}>
+                <div className="card-body" style={{ display: 'grid', gap: 10 }}>
+                  <input className="form-input" placeholder="Название" value={regForm.title} onChange={(e) => setRegForm((f) => ({ ...f, title: e.target.value }))} />
+                  <textarea className="form-textarea" placeholder="Описание" value={regForm.description} onChange={(e) => setRegForm((f) => ({ ...f, description: e.target.value }))} />
+                  <select className="form-select" value={regForm.type} onChange={(e) => { setRegForm((f) => ({ ...f, type: e.target.value })); setRegFile(null); }}>
+                    <option value="link">Ссылка</option>
+                    <option value="file">Файл</option>
+                  </select>
+
+                  <div className="form-group">
+                    <label className="form-label">Допустимые ошибки</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      min={0}
+                      max={5}
+                      value={regForm.quiz_allowed_mistakes}
+                      onChange={(e) => setRegForm((f) => ({ ...f, quiz_allowed_mistakes: e.target.value }))}
+                    />
+                  </div>
+
+                  <div style={{ border: '1px solid var(--gray-200)', borderRadius: 10, padding: 10, display: 'grid', gap: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>Тест по регламенту</div>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setRegForm((f) => ({ ...f, quiz_questions: [...(f.quiz_questions || []), createEmptyQuizQuestion()] }))}
+                      >
+                        <Plus size={13} /> Добавить вопрос
+                      </button>
+                    </div>
+                    {(regForm.quiz_questions || []).map((q, qIdx) => (
+                      <div key={`quiz-${qIdx}`} style={{ border: '1px solid var(--gray-200)', borderRadius: 8, padding: 8, display: 'grid', gap: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 12, color: 'var(--gray-600)' }}>Вопрос {qIdx + 1}</div>
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            style={{ color: 'var(--danger)' }}
+                            onClick={() => setRegForm((f) => ({ ...f, quiz_questions: (f.quiz_questions || []).filter((_, idx) => idx !== qIdx) }))}
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 500, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {doc.href ? (
-                              <a href={doc.href} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
-                                {doc.title}
-                              </a>
-                            ) : (
-                              doc.title
-                            )}
-                            {doc.quizRequired && <span className="badge badge-yellow">Мини-тест</span>}
+                        <input
+                          className="form-input"
+                          placeholder="Текст вопроса"
+                          value={q.question || ''}
+                          onChange={(e) => updateQuizQuestion(qIdx, { question: e.target.value })}
+                        />
+                        {(q.options || []).map((opt, oIdx) => (
+                          <div key={`quiz-${qIdx}-opt-${oIdx}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 6 }}>
+                            <input
+                              className="form-input"
+                              placeholder={`Вариант ${oIdx + 1}`}
+                              value={opt || ''}
+                              onChange={(e) => updateQuizOption(qIdx, oIdx, e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${String(q.correct_answer || '') === String(opt || '') ? 'btn-primary' : 'btn-secondary'}`}
+                              onClick={() => updateQuizQuestion(qIdx, { correct_answer: q.options?.[oIdx] || '' })}
+                            >
+                              Правильный
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              style={{ color: 'var(--danger)' }}
+                              onClick={() =>
+                                setRegForm((f) => ({
+                                  ...f,
+                                  quiz_questions: (f.quiz_questions || []).map((item, idx) => {
+                                    if (idx !== qIdx) return item;
+                                    const nextOptions = (item.options || []).filter((_, i) => i !== oIdx);
+                                    const nextCorrect = nextOptions.includes(item.correct_answer) ? item.correct_answer : '';
+                                    return { ...item, options: nextOptions, correct_answer: nextCorrect };
+                                  }),
+                                }))
+                              }
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--gray-400)' }}>{doc.desc?.slice(0, 50)}...</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{doc.format}</td>
-                    <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{doc.date}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn-icon" onClick={() => editDoc(doc)} disabled={submitting}>
-                          <Pencil size={13} />
-                        </button>
-                        <button className="btn-icon" title="Настроить мини-тест" onClick={() => editQuiz(doc)} disabled={submitting}>
-                          <ClipboardCheck size={13} />
-                        </button>
-                        <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => removeDoc(doc.id)} disabled={submitting}>
-                          <Trash2 size={13} />
+                        ))}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() =>
+                            setRegForm((f) => ({
+                              ...f,
+                              quiz_questions: (f.quiz_questions || []).map((item, idx) =>
+                                idx === qIdx ? { ...item, options: [...(item.options || []), ''] } : item
+                              ),
+                            }))
+                          }
+                        >
+                          <Plus size={13} /> Добавить вариант
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    ))}
+                    {(regForm.quiz_questions || []).length === 0 && (
+                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Без вопросов тест по регламенту не обязателен.</div>
+                    )}
+                  </div>
+
+                  {regForm.type === 'link' && (
+                    <input className="form-input" placeholder="https://..." value={regForm.url} onChange={(e) => setRegForm((f) => ({ ...f, url: e.target.value }))} />
+                  )}
+                  {regForm.type === 'file' && (
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      <input className="form-input" type="file" accept=".pdf,application/pdf" onChange={(e) => setRegFile(e.target.files?.[0] || null)} />
+                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{regFile ? `Выбран файл: ${regFile.name}` : 'Файл не выбран'}</div>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary btn-sm" onClick={saveReg}><Plus size={13} /> {regEditId ? 'Сохранить' : 'Добавить'}</button>
+                    {regEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setRegEditId(null); setRegForm(emptyReg); setRegFile(null); }}>Отмена</button>}
+                  </div>
+                </div>
+              </div>
+              <DataTable
+                rows={regs}
+                columns={[
+                  { key: 'title', label: 'НАЗВАНИЕ' },
+                  { key: 'type', label: 'ТИП' },
+                  { key: 'quiz_questions_count', label: 'ВОПРОСОВ' },
+                  { key: 'created_at', label: 'СОЗДАНО' },
+                ]}
+                onEdit={(item) => {
+                  setRegEditId(item.id);
+                  setRegForm({
+                    title: item.title || '',
+                    description: item.description || '',
+                    type: item.type || 'link',
+                    url: item.external_url || '',
+                    quiz_allowed_mistakes: item.quiz_allowed_mistakes ?? 1,
+                    quiz_questions: Array.isArray(item.quiz_questions) ? item.quiz_questions : [],
+                  });
+                  setRegFile(null);
+                }}
+                onDelete={async (item) => {
+                  await regulationsAPI.delete(item.id);
+                  await load();
+                }}
+                mapRow={(row) => ({ ...row, quiz_questions_count: Array.isArray(row.quiz_questions) ? row.quiz_questions.length : 0 })}
+              />
+            </>
+          )}
+
+          {tab === 'instructions' && (
+            <>
+              <div className="card" style={{ marginBottom: 12 }}>
+                <div className="card-body" style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <select className="form-select" value={instructionForm.language} onChange={(e) => setInstructionForm((f) => ({ ...f, language: e.target.value }))}>
+                      <option value="ru">RU</option>
+                      <option value="en">EN</option>
+                      <option value="kg">KG</option>
+                    </select>
+                    <select className="form-select" value={instructionForm.type} onChange={(e) => setInstructionForm((f) => ({ ...f, type: e.target.value }))}>
+                      <option value="text">Текст</option>
+                      <option value="link">Ссылка</option>
+                    </select>
+                  </div>
+                  <textarea className="form-textarea" placeholder={instructionForm.type === 'link' ? 'https://...' : 'Текст инструкции'} value={instructionForm.content} onChange={(e) => setInstructionForm((f) => ({ ...f, content: e.target.value }))} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary btn-sm" onClick={saveInstruction}><Plus size={13} /> {instructionEditId ? 'Сохранить' : 'Добавить инструкцию'}</button>
+                    {instructionEditId && <button className="btn btn-secondary btn-sm" onClick={() => { setInstructionEditId(null); setInstructionForm(emptyInstruction); }}>Отмена</button>}
+                  </div>
+                </div>
+              </div>
+              <DataTable
+                rows={instructions}
+                columns={[
+                  { key: 'type', label: 'ТИП' },
+                  { key: 'language', label: 'ЯЗЫК' },
+                  { key: 'content', label: 'СОДЕРЖАНИЕ' },
+                  { key: 'updated_at', label: 'ОБНОВЛЕНО' },
+                ]}
+                onEdit={(item) => {
+                  setInstructionEditId(item.id);
+                  setInstructionForm({ language: item.language || 'ru', type: item.type || 'text', content: item.content || '', is_active: true });
+                }}
+                onDelete={async (item) => {
+                  await instructionsAPI.delete(item.id);
+                  await load();
+                }}
+              />
+            </>
+          )}
+        </>
+      )}
     </MainLayout>
+  );
+}
+
+function Stat({ title, value }) {
+  return (
+    <div className="card">
+      <div className="card-body">
+        <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{title}</div>
+        <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function DataTable({ rows, columns, onEdit, onDelete, hideActions = false, mapRow }) {
+  const prepared = (rows || []).map((row) => (mapRow ? mapRow(row) : row));
+  return (
+    <div className="card">
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              {columns.map((c) => <th key={c.key}>{c.label}</th>)}
+              {!hideActions && <th>ДЕЙСТВИЯ</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {prepared.map((row) => (
+              <tr key={row.id}>
+                {columns.map((c) => (
+                  <td key={`${row.id}-${c.key}`}>{String(row[c.key] ?? '').slice(0, 120) || '-'}</td>
+                ))}
+                {!hideActions && (
+                  <td>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn-icon" onClick={() => onEdit?.(row)}><Pencil size={13} /></button>
+                      <button className="btn-icon" style={{ color: 'var(--danger)' }} onClick={() => onDelete?.(row)}><Trash2 size={13} /></button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {prepared.length === 0 && (
+              <tr><td colSpan={columns.length + (hideActions ? 0 : 1)}>Данных пока нет.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
