@@ -125,12 +125,13 @@ export default function Tasks() {
         list.map((u) => ({
           id: u.id,
           name: u.full_name || u.username || `ID ${u.id}`,
+          role: u.role || '',
         }))
       );
     } catch {
       const fallback = Array.from(
         new Map(
-          tasks.map((task) => [task.assigneeId, { id: task.assigneeId, name: task.assigneeName }])
+          tasks.map((task) => [task.assigneeId, { id: task.assigneeId, name: task.assigneeName, role: '' }])
         ).values()
       );
       setAssigneeOptions(fallback);
@@ -257,6 +258,10 @@ export default function Tasks() {
       setProgressLoading(false);
     }
   };
+
+  const internRoleByData = String(progressData?.user?.role || '').toLowerCase();
+  const internRoleByCard = String(progressUser?.role || '').toLowerCase();
+  const isInternMember = internRoleByData.includes('intern') || internRoleByCard.includes('intern');
 
   return (
     <MainLayout title="Задачи">
@@ -483,7 +488,7 @@ export default function Tasks() {
                   <div style={{ fontSize: 13, color: 'var(--gray-600)', marginBottom: 8 }}>
                     День: {progressData?.overview?.current_day_number || '-'} | Выполнено: {progressData?.overview?.completed_days || 0}/{progressData?.overview?.total_days || 0}
                   </div>
-                  {String(progressData?.user?.role || '').toUpperCase() === 'INTERN' ? (
+                  {isInternMember ? (
                     <>
                       <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Регламенты</div>
                       <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--gray-200)', borderRadius: 8, padding: 8, marginBottom: 10 }}>
