@@ -7,8 +7,8 @@ export const authAPI = {
   logout: (refresh) =>
     api.post('/auth/logout/', { refresh }),
 
-  getMe: () =>
-    api.get('/auth/me/'),
+  getMe: (config) =>
+    api.get('/auth/me/', config),
 
   updateMe: (data) =>
     api.patch('/auth/me/', data),

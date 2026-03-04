@@ -58,7 +58,7 @@ function statusBadge(status) {
 }
 
 function isAdminRole(role) {
-  return role === 'department_head' || role === 'admin' || role === 'superadmin';
+  return role === 'department_head' || role === 'admin' || role === 'administrator' || role === 'superadmin';
 }
 
 function MetricCard({ title, value, hint, borderColor = 'var(--gray-200)' }) {

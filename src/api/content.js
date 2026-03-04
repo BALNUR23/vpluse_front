@@ -1,4 +1,5 @@
-﻿import api from './axios';
+import api from './axios';
+import { getStoredLocale } from '../context/LocaleContext';
 
 export const newsAPI = {
   list: () => api.get('/core/news/'),
@@ -96,9 +97,9 @@ export const companyAPI = {
 };
 
 export const notificationsAPI = {
-  list: (params) => api.get('/v1/common/notifications/', { params }),
-  markRead: (id) => api.patch(`/v1/common/notifications/${id}/read/`),
-  markAllRead: () => api.patch('/v1/common/notifications/read-all/'),
+  list: (params = {}) => api.get('/v1/common/notifications/', { params: { lang: getStoredLocale(), ...params } }),
+  markRead: (id) => api.patch(`/v1/common/notifications/${id}/read/`, null, { params: { lang: getStoredLocale() } }),
+  markAllRead: () => api.patch('/v1/common/notifications/read-all/', null, { params: { lang: getStoredLocale() } }),
 };
 
 export const payrollAPI = {
@@ -110,3 +111,4 @@ export const payrollAPI = {
   createSalaryProfile: (data) => api.post('/v1/payroll/admin/salary-profiles/', data),
   updateSalaryProfile: (id, data) => api.patch(`/v1/payroll/admin/salary-profiles/${id}/`, data),
 };
+

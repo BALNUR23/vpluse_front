@@ -12,6 +12,7 @@ const ROLE_LABELS = {
   employee: 'Сотрудник',
   intern: 'Стажер',
   admin: 'Админ',
+  administrator: 'Администратор',
   superadmin: 'Суперадмин',
 };
 
@@ -21,7 +22,7 @@ function roleWeight(role) {
   if (normalized === 'employee') return 2;
   if (normalized === 'intern') return 3;
   if (normalized === 'department_head') return 4;
-  if (normalized === 'admin' || normalized === 'superadmin') return 5;
+  if (normalized === 'admin' || normalized === 'administrator' || normalized === 'superadmin') return 5;
   return 99;
 }
 

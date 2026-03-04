@@ -111,6 +111,7 @@ const NAV_MAP = {
   projectmanager: NAV_PM,
   department_head: NAV_DEPARTMENT_HEAD,
   admin: NAV_ADMIN,
+  administrator: NAV_ADMIN,
   superadmin: NAV_SUPERADMIN,
 };
 
@@ -123,14 +124,14 @@ export default function Sidebar() {
   const [hideMenuPanelOpen, setHideMenuPanelOpen] = useState(false);
 
   const canCustomizeHide =
-    user?.role === 'department_head' || user?.role === 'admin' || user?.role === 'projectmanager' || user?.role === 'employee';
+    user?.role === 'department_head' || user?.role === 'admin' || user?.role === 'administrator' || user?.role === 'projectmanager' || user?.role === 'employee';
   const baseNav = NAV_MAP[user?.role] || NAV_INTERN;
   const nav = canCustomizeHide
     ? baseNav.filter((item) => item.path !== '/regulations' && item.path !== '/instructions')
     : baseNav;
 
   const handleHome = () => {
-    if (user?.role === 'department_head' || user?.role === 'admin' || user?.role === 'superadmin') {
+    if (['department_head', 'admin', 'administrator', 'superadmin'].includes(String(user?.role || '').toLowerCase())) {
       navigate('/admin/overview');
     }
     else navigate('/dashboard');

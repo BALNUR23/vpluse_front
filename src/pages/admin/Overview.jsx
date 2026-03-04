@@ -38,7 +38,7 @@ export default function AdminOverview() {
   const stats = useMemo(() => {
     const activeUsers = users.filter((u) => u.is_active).length;
     const interns = users.filter((u) => u.role === 'intern').length;
-    const admins = users.filter((u) => u.role === 'department_head' || u.role === 'admin' || u.role === 'superadmin').length;
+    const admins = users.filter((u) => u.role === 'department_head' || u.role === 'admin' || u.role === 'administrator' || u.role === 'superadmin').length;
     const sentReports = reports.filter((r) => String(r.status || '').toUpperCase() === 'SENT').length;
     const newFeedback = feedback.filter((f) => f.status === 'new').length;
     return { activeUsers, interns, admins, sentReports, newFeedback };

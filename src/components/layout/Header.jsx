@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import { notificationsAPI } from '../../api/content';
+import { feedbackAPI, notificationsAPI } from '../../api/content';
+import { mapNotification } from '../../utils/notificationI18n';
 
 const ROLE_COLORS = {
   intern: '#2563EB',
@@ -11,8 +12,20 @@ const ROLE_COLORS = {
   projectmanager: '#7C3AED',
   department_head: '#0EA5E9',
   admin: '#EA580C',
+  administrator: '#EA580C',
   superadmin: '#BE123C',
 };
+const FEEDBACK_RECEIVER_ROLES = new Set(['admin', 'administrator', 'superadmin']);
+
+function dedupeNotifications(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = `${item.code || 'unknown'}:${String(item.message || '')}:${String(item.created_at || '')}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 export default function Header({ title }) {
   const { user, logout } = useAuth();
@@ -26,22 +39,44 @@ export default function Header({ title }) {
   const initials = user?.name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || '??';
   const roleColor = ROLE_COLORS[user?.role] || '#2563EB';
   const firstName = user?.name?.split(' ')[0] || '';
-
-  const i18n = {
-    ru: { welcome: 'Добро пожаловать', notifications: 'Уведомления', read: 'Прочитано', noEvents: 'Новых событий нет.', profile: 'Профиль', logout: 'Выйти' },
-    en: { welcome: 'Welcome', notifications: 'Notifications', read: 'Mark read', noEvents: 'No new events.', profile: 'Profile', logout: 'Logout' },
-    kg: { welcome: 'Кош келиңиз', notifications: 'Билдирмелер', read: 'Окулган', noEvents: 'Жаңы окуялар жок.', profile: 'Профиль', logout: 'Чыгуу' },
-  }[locale] || {
-    welcome: 'Добро пожаловать', notifications: 'Уведомления', read: 'Прочитано', noEvents: 'Новых событий нет.', profile: 'Профиль', logout: 'Выйти',
-  };
+  const dateLocale = locale === 'kg' ? 'ky-KG' : locale === 'en' ? 'en-US' : 'ru-RU';
 
   const refreshNotifications = async () => {
     if (!user?.id) return;
     try {
-      const res = await notificationsAPI.list();
-      const items = Array.isArray(res?.data?.items) ? res.data.items : [];
-      setNotifs(items);
-      setUnreadCount(Number(res?.data?.unread_count || 0));
+      const role = String(user?.role || '').toLowerCase();
+      const isFeedbackReceiver = FEEDBACK_RECEIVER_ROLES.has(role);
+
+      const [notificationsRes, feedbackRes] = await Promise.all([
+        notificationsAPI.list().catch(() => ({ data: { items: [], unread_count: 0 } })),
+        isFeedbackReceiver ? feedbackAPI.list().catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+      ]);
+
+      const apiItems = Array.isArray(notificationsRes?.data?.items) ? notificationsRes.data.items : [];
+      let mapped = apiItems.map((item) => mapNotification(item, t));
+      const hasFeedbackFromBackend = mapped.some((item) => item.code === 'feedback_ticket');
+
+      if (isFeedbackReceiver && !hasFeedbackFromBackend) {
+        const feedbackRows = Array.isArray(feedbackRes?.data) ? feedbackRes.data : [];
+        const feedbackNotifications = feedbackRows
+          .filter((row) => String(row?.status || '').toLowerCase() === 'new')
+          .map((row) =>
+            mapNotification(
+              {
+                id: `feedback-ticket:${row.id}`,
+                code: 'feedback_ticket',
+                message: row?.text || '',
+                created_at: row?.created_at || '',
+                payload: { ticket_id: row?.id },
+              },
+              t
+            )
+          );
+        mapped = dedupeNotifications([...feedbackNotifications, ...mapped]);
+      }
+
+      setNotifs(mapped);
+      setUnreadCount(Number(notificationsRes?.data?.unread_count || mapped.length || 0));
     } catch {
       setNotifs([]);
       setUnreadCount(0);
@@ -52,7 +87,7 @@ export default function Header({ title }) {
     refreshNotifications();
     const i = setInterval(() => { refreshNotifications(); }, 10000);
     return () => clearInterval(i);
-  }, [user?.id, user?.role]);
+  }, [user?.id, user?.role, t]);
 
   const readAllNotifications = async () => {
     if (!user?.id) return;
@@ -68,7 +103,7 @@ export default function Header({ title }) {
     <header className="header">
       <div className="header-title">{title || ''}</div>
       <div style={{ flex: 1, paddingLeft: 20, fontSize: 14, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: 6 }}>
-        {i18n.welcome}, <b style={{ color: 'var(--gray-800)' }}>{firstName}!</b>
+        {t('header.welcome', 'Добро пожаловать')}, <b style={{ color: 'var(--gray-800)' }}>{firstName}!</b>
       </div>
       <div className="header-lang" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
         {['ru', 'en', 'kg'].map((code, idx) => (
@@ -98,20 +133,29 @@ export default function Header({ title }) {
         {notifOpen && (
           <div style={{ position: 'absolute', top: '100%', right: -20, marginTop: 8, width: 360, maxWidth: 'calc(100vw - 24px)', background: 'var(--white)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', zIndex: 120 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--gray-100)' }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>{i18n.notifications}</div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{t('header.notifications', 'Уведомления')}</div>
               <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); readAllNotifications(); }}>
-                {i18n.read}
+                {t('notifications.markRead', t('header.read', 'Прочитано'))}
               </button>
             </div>
             <div style={{ maxHeight: 360, overflow: 'auto', padding: 8 }}>
               {notifs.length === 0 && (
-                <div style={{ fontSize: 12, color: 'var(--gray-500)', padding: 8 }}>{i18n.noEvents}</div>
+                <div style={{ fontSize: 12, color: 'var(--gray-500)', padding: 8 }}>{t('notifications.empty', t('header.noEvents', 'Новых событий нет.'))}</div>
               )}
               {notifs.map((n) => (
-                <div key={n.id} style={{ padding: '8px 10px', borderBottom: '1px solid var(--gray-100)' }}>
+                <div
+                  key={n.id}
+                  style={{ padding: '8px 10px', borderBottom: '1px solid var(--gray-100)', cursor: n.code === 'feedback_ticket' ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (n.code === 'feedback_ticket') {
+                      setNotifOpen(false);
+                      navigate('/admin/feedback');
+                    }
+                  }}
+                >
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gray-800)' }}>{n.title}</div>
                   <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 2 }}>{n.message}</div>
-                  {n.created_at && <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 3 }}>{new Date(n.created_at).toLocaleString('ru-RU')}</div>}
+                  {n.created_at && <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 3 }}>{new Date(n.created_at).toLocaleString(dateLocale)}</div>}
                 </div>
               ))}
             </div>
@@ -140,12 +184,12 @@ export default function Header({ title }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 14, color: 'var(--gray-700)' }}
               onClick={() => { navigate('/profile'); setDropOpen(false); }}>
-              <User size={15} /> {i18n.profile}
+              <User size={15} /> {t('header.profile', 'Профиль')}
             </div>
             <div style={{ height: 1, background: 'var(--gray-200)', margin: '4px 0' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', cursor: 'pointer', fontSize: 14, color: 'var(--danger)' }}
               onClick={() => { logout(); navigate('/login'); }}>
-              <LogOut size={15} /> {i18n.logout}
+              <LogOut size={15} /> {t('header.logout', 'Выйти')}
             </div>
           </div>
         )}

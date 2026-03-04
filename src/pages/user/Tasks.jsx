@@ -56,13 +56,13 @@ function normalizeReport(raw) {
 export default function Tasks() {
   const { user } = useAuth();
   const role = user?.role;
-  const canSeeTeamTasksSection = ['department_head', 'admin', 'superadmin', 'projectmanager'].includes(role);
+  const canSeeTeamTasksSection = ['department_head', 'admin', 'administrator', 'superadmin', 'projectmanager'].includes(role);
   const canSeeOwnTasksSection = role !== 'superadmin';
   const canSwitchTaskSections = canSeeTeamTasksSection;
   const [taskSection, setTaskSection] = useState(role === 'superadmin' ? 'team' : 'my');
   const canSubmitDaily = ['employee', 'projectmanager'].includes(user?.role);
-  const canViewDaily = ['department_head', 'admin', 'superadmin', 'projectmanager'].includes(user?.role);
-  const canViewTeamList = ['projectmanager', 'department_head', 'admin', 'superadmin'].includes(user?.role);
+  const canViewDaily = ['department_head', 'admin', 'administrator', 'superadmin', 'projectmanager'].includes(user?.role);
+  const canViewTeamList = ['projectmanager', 'department_head', 'admin', 'administrator', 'superadmin'].includes(user?.role);
 
   const [tasks, setTasks] = useState([]);
   const [reports, setReports] = useState([]);

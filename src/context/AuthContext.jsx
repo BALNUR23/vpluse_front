@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../api/auth';
 import { listCustomMockUsers, MOCK_USERS_CHANGED_EVENT } from '../utils/mockUsers';
 
@@ -104,6 +104,7 @@ const ROLE_LABELS = {
   projectmanager: 'Проект-менеджер',
   department_head: 'Руководитель отдела',
   admin: 'Админ',
+  administrator: 'Администратор',
   superadmin: 'Суперадмин',
 };
 
@@ -237,7 +238,7 @@ export function AuthProvider({ children }) {
 
   const updateUser = (data) => setUser(u => ({ ...u, ...data }));
 
-  const isAdmin = user?.role === 'department_head' || user?.role === 'admin' || user?.role === 'superadmin';
+  const isAdmin = user?.role === 'department_head' || user?.role === 'admin' || user?.role === 'administrator' || user?.role === 'superadmin';
   const isSuperAdmin = user?.role === 'superadmin';
   const isIntern = user?.role === 'intern';
 
@@ -254,5 +255,3 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
-
-

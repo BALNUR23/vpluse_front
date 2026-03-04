@@ -28,10 +28,13 @@ import AttendanceMarks from '../pages/admin/AttendanceMarks';
 import AdminInterns    from '../pages/admin/Interns';
 import AutoLocaleText  from '../components/common/AutoLocaleText';
 
+const ADMIN_ROLES = ['department_head', 'admin', 'administrator', 'superadmin'];
+const CONTENT_MANAGE_ROLES = ['admin', 'administrator', 'superadmin'];
+
 function HomeRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'department_head' || user.role === 'admin' || user.role === 'superadmin') return <Navigate to="/admin/overview" replace />;
+  if (ADMIN_ROLES.includes(String(user.role || '').toLowerCase())) return <Navigate to="/admin/overview" replace />;
   return <Navigate to="/dashboard" replace />;
 }
 
@@ -50,7 +53,7 @@ function AdminRoute({ children }) {
 function ContentManageRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'admin' && user.role !== 'superadmin') {
+  if (!CONTENT_MANAGE_ROLES.includes(String(user.role || '').toLowerCase())) {
     return <Navigate to="/admin/overview" replace />;
   }
   return children;
@@ -73,7 +76,7 @@ function OnboardingManageRoute({ children }) {
 function InternsManageRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (!['admin', 'superadmin'].includes(String(user.role || '').toLowerCase())) {
+  if (!['admin', 'administrator', 'superadmin'].includes(String(user.role || '').toLowerCase())) {
     return <Navigate to="/admin/overview" replace />;
   }
   return children;
@@ -91,8 +94,6 @@ function SalaryRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'intern') return <Navigate to="/dashboard" replace />;
-  // superadmin тоже может использовать /salary
-  if (user.role === 'department_head' || user.role === 'admin' || user.role === 'superadmin') return children;
   return children;
 }
 
@@ -113,7 +114,7 @@ function TasksRoute({ children }) {
 function AttendanceMarksRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (!['projectmanager', 'department_head', 'admin', 'superadmin'].includes(String(user.role || '').toLowerCase())) {
+  if (!['projectmanager', 'department_head', 'admin', 'administrator', 'superadmin'].includes(String(user.role || '').toLowerCase())) {
     return <Navigate to="/dashboard" replace />;
   }
   return children;
@@ -122,7 +123,7 @@ function AttendanceMarksRoute({ children }) {
 function PublicOnlyRoute({ children }) {
   const { user } = useAuth();
   if (!user) return children;
-  if (user.role === 'department_head' || user.role === 'admin' || user.role === 'superadmin') return <Navigate to="/admin/overview" replace />;
+  if (ADMIN_ROLES.includes(String(user.role || '').toLowerCase())) return <Navigate to="/admin/overview" replace />;
   return <Navigate to="/dashboard" replace />;
 }
 

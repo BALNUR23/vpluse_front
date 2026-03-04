@@ -9,6 +9,7 @@ const ROLE_LABELS = {
   EMPLOYEE: 'Сотрудник',
   INTERN: 'Стажер',
   ADMIN: 'Админ',
+  ADMINISTRATOR: 'Администратор',
   SUPER_ADMIN: 'Суперадмин',
 };
 
@@ -32,7 +33,7 @@ export default function AttendanceMarks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const canView = ['projectmanager', 'department_head', 'admin', 'superadmin'].includes(String(user?.role || '').toLowerCase());
+  const canView = ['projectmanager', 'department_head', 'admin', 'administrator', 'superadmin'].includes(String(user?.role || '').toLowerCase());
 
   const load = async (targetDate = date) => {
     setLoading(true);
@@ -117,4 +118,3 @@ export default function AttendanceMarks() {
     </MainLayout>
   );
 }
-

@@ -16,6 +16,7 @@ const ROLE_LABELS = {
   projectmanager: 'Тимлид',
   department_head: 'Руководитель отдела',
   admin: 'Админ',
+  administrator: 'Администратор',
   superadmin: 'Суперадмин',
 };
 
@@ -75,8 +76,8 @@ export default function AdminUsers() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
 
-  const isAdminOrSuper = isSuperAdmin || user?.role === 'admin' || user?.role === 'department_head';
-  const canAssignAdminRoles = isSuperAdmin || user?.role === 'admin';
+  const isAdminOrSuper = isSuperAdmin || user?.role === 'admin' || user?.role === 'administrator' || user?.role === 'department_head';
+  const canAssignAdminRoles = isSuperAdmin || user?.role === 'admin' || user?.role === 'administrator';
   const isDepartmentHead = user?.role === 'department_head';
   const ownDepartmentId = user?.department ? String(user.department) : '';
 
@@ -283,7 +284,7 @@ export default function AdminUsers() {
         </div>
       ) : null}
 
-      {(user?.role === 'admin' || user?.role === 'superadmin') ? (
+      {(user?.role === 'admin' || user?.role === 'administrator' || user?.role === 'superadmin') ? (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
             <span className="card-title">Заявки стажеров на завершение</span>

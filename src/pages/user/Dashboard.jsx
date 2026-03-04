@@ -42,6 +42,7 @@ export default function Dashboard() {
   const [fbText, setFbText] = useState('');
   const [fbMode, setFbMode] = useState('named');
   const [fbMsg, setFbMsg] = useState('');
+  const canSendFeedback = !['intern', 'admin', 'administrator', 'superadmin'].includes(String(user?.role || '').toLowerCase());
 
   const banner = useMemo(() => BANNERS[user?.role] || BANNERS.employee, [user?.role]);
 
@@ -125,7 +126,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {user?.role !== 'intern' && (
+      {canSendFeedback && (
         <div className="card" style={{ maxWidth: 720 }}>
           <div className="card-body">
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Обратная связь</h3>
