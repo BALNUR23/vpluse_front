@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLocale } from '../../context/LocaleContext';
-import {
-  getNotificationsForUser,
-  getUnreadCountForUser,
-  markAllNotificationsRead,
-} from '../../utils/notifications';
+import { notificationsAPI } from '../../api/v1';
 
 const ROLE_COLORS = {
   intern:         '#2563EB',
@@ -32,20 +28,32 @@ export default function Header({ title }) {
 
   const refreshNotifications = () => {
     if (!user) return;
-    setNotifs(getNotificationsForUser(user));
-    setUnreadCount(getUnreadCountForUser(user));
+    notificationsAPI.list()
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setNotifs(data.map(n => ({
+          id: n.id,
+          title: n.title || n.subject || '',
+          text: n.text || n.body || n.message || '',
+          ts: n.created_at ? new Date(n.created_at).toLocaleString('ru-RU') : '',
+          read: n.is_read ?? n.read ?? false,
+        })));
+        setUnreadCount(data.filter(n => !(n.is_read ?? n.read)).length);
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
     refreshNotifications();
-    const i = setInterval(refreshNotifications, 5000);
+    const i = setInterval(refreshNotifications, 30000);
     return () => clearInterval(i);
-  }, [user?.id, user?.role]);
+  }, [user?.id]);
 
-  const readAllNotifications = () => {
-    if (!user) return;
-    markAllNotificationsRead(user.id, notifs.map(n => n.id));
-    setUnreadCount(0);
+  const readAllNotifications = (e) => {
+    e.stopPropagation();
+    notificationsAPI.markAllRead()
+      .then(() => { setUnreadCount(0); setNotifs(ns => ns.map(n => ({ ...n, read: true }))); })
+      .catch(() => { setUnreadCount(0); });
   };
 
   return (
@@ -83,7 +91,7 @@ export default function Header({ title }) {
           <div style={{ position: 'absolute', top: '100%', right: -20, marginTop: 8, width: 360, maxWidth: 'calc(100vw - 24px)', background: 'var(--white)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', zIndex: 120 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--gray-100)' }}>
               <div style={{ fontSize: 13, fontWeight: 700 }}>{t('header.notifications', 'Уведомления')}</div>
-              <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); readAllNotifications(); }}>
+              <button className="btn btn-secondary btn-sm" onClick={readAllNotifications}>
                 {t('header.read', 'Прочитано')}
               </button>
             </div>

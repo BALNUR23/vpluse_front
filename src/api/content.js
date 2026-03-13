@@ -2,6 +2,7 @@ import api from './axios';
 
 export const newsAPI = {
   list: () => api.get('/core/news/'),
+  get: (id) => api.get(`/core/news/${id}/`),
   create: (data) => api.post('/core/news/', data),
   update: (id, data) => api.patch(`/core/news/${id}/`, data),
   delete: (id) => api.delete(`/core/news/${id}/`),
@@ -27,9 +28,20 @@ export const onboardingAPI = {
 };
 
 export const schedulesAPI = {
+  list: (params) => api.get('/schedules/', { params }),
   getWorkSchedules: () => api.get('/schedules/work-schedules/'),
   getMine: () => api.get('/schedules/user-schedules/mine/'),
   getHolidays: (year) => api.get('/schedules/holidays/', { params: { year } }),
+};
+
+export const myScheduleAPI = {
+  get: () => api.get('/my-schedule/'),
+};
+
+export const calendarAPI = {
+  get: (params) => api.get('/calendar/', { params }),
+  getMonth: (params) => api.get('/calendar-month/', { params }),
+  chooseSchedule: (data) => api.post('/choose-schedule/', data),
 };
 
 export const feedbackAPI = {
@@ -40,4 +52,9 @@ export const feedbackAPI = {
 
 export const auditAPI = {
   list: (params) => api.get('/core/audit/', { params }),
+};
+
+export const securityAPI = {
+  unlockUsers: () => api.post('/security/unlock-users/'),
+  forceLogout: () => api.post('/security/force-logout/'),
 };

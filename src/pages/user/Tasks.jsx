@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import MainLayout from '../../layouts/MainLayout';
 import { useAuth } from '../../context/AuthContext';
+import { tasksV1API } from '../../api/v1';
 import { Plus, X, Flag, MessageSquare, Calendar, User, Paperclip, History } from 'lucide-react';
 
 const COLUMNS = [
@@ -16,31 +17,22 @@ const PRIORITY_COLORS = {
   low:    { color: '#6B7280', label: 'Низкий',    bg: '#F3F4F6' },
 };
 
-const TASKS_STORAGE_KEY = 'vpluse_tasks_workflow_v1';
-
-const DEFAULT_TASKS = [
-  { id: 1, title: 'Спарсить всех АУ по ЕФРСБ', description: 'Подготовить выгрузку и сверить с текущим списком.', project: 'ЕФРСБ интеграция', col: 'new', priority: 'high', assigneeId: 1, assignee: 'Алексей П.', date: '2026-03-02', comments: [], attachments: [], history: [] },
-  { id: 2, title: 'Ревизия CRM на ошибки', description: 'Найти дубли и некорректные статусы сделок.', project: 'CRM аудит', col: 'progress', priority: 'high', assigneeId: 1, assignee: 'Алексей П.', date: '2026-03-03', comments: [], attachments: [], history: [] },
-  { id: 3, title: 'Отправить майндкарту Свете', description: 'Обновить версии и отправить итоговый вариант.', project: 'CRM аудит', col: 'new', priority: 'normal', assigneeId: 2, assignee: 'Айбек У.', date: '2026-03-01', comments: [], attachments: [], history: [] },
-  { id: 4, title: 'Поставить систему смены статуса', description: 'Согласовать правила автоперехода воронки.', project: 'ЕФРСБ интеграция', col: 'review', priority: 'normal', assigneeId: 3, assignee: 'Максат С.', date: '2026-03-04', comments: [], attachments: [], history: [] },
-];
-
 const nowLabel = () => new Date().toLocaleString('ru-RU');
 
-const readTasks = () => {
-  try {
-    const raw = localStorage.getItem(TASKS_STORAGE_KEY);
-    if (!raw) return DEFAULT_TASKS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : DEFAULT_TASKS;
-  } catch {
-    return DEFAULT_TASKS;
-  }
-};
-
-const saveTasks = (tasks) => {
-  localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-};
+const normalizeTask = (raw) => ({
+  id: raw.id,
+  title: raw.title || '',
+  description: raw.description || '',
+  project: raw.project || raw.project_name || 'Без проекта',
+  col: raw.status || raw.col || 'new',
+  priority: raw.priority || 'normal',
+  assigneeId: raw.assignee_id ?? raw.assignee ?? null,
+  assignee: raw.assignee_name || (typeof raw.assignee === 'string' ? raw.assignee : '—'),
+  date: raw.deadline || raw.date || null,
+  comments: Array.isArray(raw.comments) ? raw.comments : [],
+  attachments: Array.isArray(raw.attachments) ? raw.attachments : [],
+  history: Array.isArray(raw.history) ? raw.history : [],
+});
 
 const depKey = (u) => String(u?.department_name || u?.department || '').trim().toLowerCase();
 
@@ -98,7 +90,7 @@ function TaskCard({ task, onDelete, onMove, columns, onOpen }) {
 
 export default function Tasks() {
   const { user, mockUsers = [] } = useAuth();
-  const [allTasks, setAllTasks] = useState(readTasks);
+  const [allTasks, setAllTasks] = useState([]);
   const [adminTaskView, setAdminTaskView] = useState('my');
   const [modal, setModal] = useState(false);
   const [detail, setDetail] = useState(null);
@@ -107,15 +99,6 @@ export default function Tasks() {
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState(user?.id ? [String(user.id)] : []);
   const [commentText, setCommentText] = useState('');
   const [form, setForm] = useState({ title: '', description: '', project: '', priority: 'normal', assigneeId: user?.id || '', date: '', col: 'new' });
-
-  useEffect(() => {
-    saveTasks(allTasks);
-  }, [allTasks]);
-
-  useEffect(() => {
-    setForm(f => ({ ...f, assigneeId: user?.id || '' }));
-    setSelectedAssigneeIds(user?.id ? [String(user.id)] : []);
-  }, [user?.id]);
 
   const isProjectManager = user?.role === 'projectmanager';
   const isEmployee = user?.role === 'employee';
@@ -195,28 +178,28 @@ export default function Tasks() {
       : [String(user?.id)];
     if (targetIds.length === 0) return;
 
-    const tasksToCreate = targetIds.map((assigneeId, idx) => {
+    targetIds.forEach((assigneeId) => {
       const assignee = assigneeOptions.find(a => String(a.id) === String(assigneeId));
-      const nowTs = Date.now() + idx;
-      return {
-        id: nowTs,
+      const payload = {
         title: form.title.trim(),
         description: form.description.trim(),
         project: form.project.trim() || 'Без проекта',
-        col: form.col,
+        status: form.col,
         priority: form.priority,
-        assigneeId: Number(assigneeId) || user?.id,
-        assignee: assignee?.name || user?.name || '—',
-        date: form.date || null,
-        comments: [],
-        attachments: [],
-        history: [
-          { id: `h-${nowTs}`, at: nowLabel(), by: user?.name || 'Система', from: null, to: form.col, note: 'Задача создана' }
-        ],
+        assignee_id: Number(assigneeId) || user?.id,
+        deadline: form.date || null,
       };
+      tasksV1API.create(payload)
+        .then(res => {
+          const created = normalizeTask(res.data);
+          if (!created.assignee || created.assignee === '—') {
+            created.assignee = assignee?.name || user?.name || '—';
+          }
+          setAllTasks(t => [...t, created]);
+        })
+        .catch(() => {});
     });
 
-    setAllTasks(t => [...t, ...tasksToCreate]);
     setForm({
       title: '',
       description: '',
@@ -232,9 +215,13 @@ export default function Tasks() {
     setModal(false);
   };
 
-  const deleteTask = (id) => setAllTasks(t => t.filter(x => x.id !== id));
+  const deleteTask = (id) => {
+    tasksV1API.delete(id).catch(() => {});
+    setAllTasks(t => t.filter(x => x.id !== id));
+  };
 
   const moveTask = (id, col) => {
+    tasksV1API.move(id, { status: col }).catch(() => {});
     setAllTasks(t => t.map(x => {
       if (x.id !== id) return x;
       const history = Array.isArray(x.history) ? x.history : [];

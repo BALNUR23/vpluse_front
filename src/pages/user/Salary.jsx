@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../layouts/MainLayout';
 import { DollarSign, Pencil, Check, X } from 'lucide-react';
 import { getAttendanceStore } from '../../utils/attendance';
 import { getAssignedScheduleForUser } from '../../utils/scheduleApproval';
+import { payrollAPI } from '../../api/v1';
 
 const fmt = (n) => (n || 0).toLocaleString('ru-RU') + ' KGS';
 const SETTINGS_KEY = 'vpluse_salary_settings_v1';
@@ -21,44 +22,11 @@ const PAY_TYPE_LABELS = {
 };
 
 // История выплат и бонусы
-const SALARY_DATA = {
-  5: { name: 'Мария К.', role: 'Суперадминистратор', dept: 'Управление', history: [
-    { month: 'Январь 2026', bonus: 30000, status: 'paid' },
-    { month: 'Декабрь 2025', bonus: 25000, status: 'paid' },
-  ]},
-  9: { name: 'Админ А.', role: 'Администратор', dept: 'Управление', history: [
-    { month: 'Январь 2026', bonus: 12000, status: 'paid' },
-    { month: 'Декабрь 2025', bonus: 10000, status: 'paid' },
-  ]},
-  2: { name: 'Айбек Усупов', role: 'Сотрудник', dept: 'Отдел холодных продаж', history: [
-    { month: 'Январь 2026', bonus: 5000, status: 'paid' },
-    { month: 'Декабрь 2025', bonus: 8000, status: 'paid' },
-  ]},
-  3: { name: 'Султаналиев Максат', role: 'Проект-менеджер', dept: 'Отдел маркетинга', history: [
-    { month: 'Январь 2026', bonus: 15000, status: 'paid' },
-    { month: 'Декабрь 2025', bonus: 20000, status: 'paid' },
-  ]},
-  4: { name: 'Иван С.', role: 'Руководитель', dept: 'Управление', history: [
-    { month: 'Январь 2026', bonus: 20000, status: 'paid' },
-    { month: 'Декабрь 2025', bonus: 25000, status: 'paid' },
-  ]},
-};
+const SALARY_DATA = {};
 
-const DEFAULT_SETTINGS = {
-  5: { payType: 'fixed', baseSalary: 180000, hourlyRate: 500, minuteRate: 8, bonus: 30000, penalty: 0, status: 'paid' },
-  9: { payType: 'fixed', baseSalary: 110000, hourlyRate: 350, minuteRate: 6, bonus: 12000, penalty: 0, status: 'paid' },
-  2: { payType: 'fixed', baseSalary: 80000, hourlyRate: 300, minuteRate: 5, bonus: 5000, penalty: 0, status: 'paid' },
-  3: { payType: 'hourly', baseSalary: 120000, hourlyRate: 350, minuteRate: 6, bonus: 15000, penalty: 0, status: 'paid' },
-  4: { payType: 'fixed', baseSalary: 150000, hourlyRate: 400, minuteRate: 7, bonus: 20000, penalty: 0, status: 'paid' },
-};
+const DEFAULT_SETTINGS = {};
 
-const ROLE_FALLBACK_SETTINGS = {
-  superadmin: { payType: 'fixed', baseSalary: 180000, hourlyRate: 500, minuteRate: 8, bonus: 30000, penalty: 0, status: 'paid' },
-  admin: { payType: 'fixed', baseSalary: 110000, hourlyRate: 350, minuteRate: 6, bonus: 12000, penalty: 0, status: 'paid' },
-  projectmanager: { payType: 'hourly', baseSalary: 120000, hourlyRate: 350, minuteRate: 6, bonus: 15000, penalty: 0, status: 'paid' },
-  employee: { payType: 'fixed', baseSalary: 80000, hourlyRate: 300, minuteRate: 5, bonus: 5000, penalty: 0, status: 'paid' },
-  intern: { payType: 'fixed', baseSalary: 40000, hourlyRate: 180, minuteRate: 3, bonus: 0, penalty: 0, status: 'pending' },
-};
+const ROLE_FALLBACK_SETTINGS = {};
 
 const readSettings = () => {
   try {
@@ -166,10 +134,7 @@ const buildFallbackSalaryData = (u) => {
     name: u.name || u.username || 'Пользователь',
     role: u.roleLabel || u.role || 'Сотрудник',
     dept: u.department_name || u.department || 'Без отдела',
-    history: [
-      { month: 'Январь 2026', bonus: 0, status: 'pending' },
-      { month: 'Декабрь 2025', bonus: 0, status: 'paid' },
-    ],
+    history: [],
   };
 };
 
@@ -181,10 +146,25 @@ const getEffectiveSalarySettings = (userId, role, settings) =>
 
 function MySalary({ user, settings }) {
   const userId = user?.id;
-  const data = SALARY_DATA[userId] || buildFallbackSalaryData(user);
+  const [payrollHistory, setPayrollHistory] = useState([]);
+  const data = buildFallbackSalaryData(user);
   const now = new Date();
   const worked = getWorkedTimeInMonth(userId, now.getFullYear(), now.getMonth());
   const userSettings = getEffectiveSalarySettings(userId, user?.role, settings);
+
+  useEffect(() => {
+    payrollAPI.list()
+      .then(res => {
+        const rows = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setPayrollHistory(rows.map(r => ({
+          month: r.month || r.period || r.date || '—',
+          bonus: r.bonus || r.bonus_amount || 0,
+          status: r.status || 'paid',
+          amount: r.amount || r.total || 0,
+        })));
+      })
+      .catch(() => {});
+  }, [userId]);
 
   if (!data || !userSettings) {
     return (
@@ -244,7 +224,7 @@ function MySalary({ user, settings }) {
               <tr><th>МЕСЯЦ</th><th>ТИП</th><th>СТАВКА</th><th>ПРЕМИЯ</th><th>ШТРАФ</th><th>СТАТУС</th></tr>
             </thead>
             <tbody>
-              {data.history.map((row, i) => (
+              {payrollHistory.map((row, i) => (
                 <tr key={i}>
                   <td>{row.month}</td>
                   <td>{PAY_TYPE_LABELS[userSettings.payType]}</td>
@@ -268,7 +248,33 @@ function MySalary({ user, settings }) {
 
 function AllSalaries({ rowsFilter = null, title = 'Настройка зарплаты сотрудников' }) {
   const [settings, setSettings] = useState(readSettings);
+  const [salaryProfiles, setSalaryProfiles] = useState([]);
   const [modal, setModal] = useState(false);
+
+  useEffect(() => {
+    payrollAPI.admin.salaryProfiles.list()
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setSalaryProfiles(data);
+        // Merge API profiles into local settings state
+        const merged = { ...readSettings() };
+        data.forEach(p => {
+          if (p.user_id) {
+            merged[String(p.user_id)] = {
+              payType: p.pay_type || 'fixed',
+              baseSalary: p.base_salary || p.salary || 0,
+              hourlyRate: p.hourly_rate || 0,
+              minuteRate: p.minute_rate || 0,
+              bonus: p.bonus || 0,
+              penalty: p.penalty || 0,
+              status: p.status || 'paid',
+            };
+          }
+        });
+        setSettings(merged);
+      })
+      .catch(() => {});
+  }, []);
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({ payType: 'fixed', baseSalary: '', hourlyRate: '', minuteRate: '', bonus: '', penalty: '', status: 'paid' });
 
@@ -334,6 +340,25 @@ function AllSalaries({ rowsFilter = null, title = 'Настройка зарпл
     };
     setSettings(next);
     saveSettings(next);
+    // Sync to API
+    const profile = salaryProfiles.find(p => String(p.user_id) === String(editId));
+    const apiPayload = {
+      user_id: editId,
+      pay_type: form.payType,
+      base_salary: Number(form.baseSalary) || 0,
+      hourly_rate: Number(form.hourlyRate) || 0,
+      minute_rate: Number(form.minuteRate) || 0,
+      bonus: Number(form.bonus) || 0,
+      penalty: Number(form.penalty) || 0,
+      status: form.status,
+    };
+    if (profile?.id) {
+      payrollAPI.admin.salaryProfiles.patch(profile.id, apiPayload).catch(() => {});
+    } else {
+      payrollAPI.admin.salaryProfiles.create(apiPayload)
+        .then(res => { if (res.data?.id) setSalaryProfiles(p => [...p, res.data]); })
+        .catch(() => {});
+    }
     setModal(false);
   };
 

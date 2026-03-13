@@ -12,6 +12,9 @@ export const authAPI = {
 
   updateMe: (data) =>
     api.patch('/auth/me/', data),
+
+  changePassword: (data) =>
+    api.post('/auth/me/password/', data),
 };
 
 export const usersAPI = {
@@ -26,7 +29,16 @@ export const usersAPI = {
 export const departmentsAPI = {
   list: () => api.get('/auth/departments/'),
   create: (data) => api.post('/auth/departments/', data),
+  update: (id, data) => api.patch(`/auth/departments/${id}/`, data),
   delete: (id) => api.delete(`/auth/departments/${id}/`),
+  transferUsers: (id, data) => api.post(`/auth/departments/${id}/transfer-users/`, data),
+};
+
+export const subdivisionsAPI = {
+  list: (params) => api.get('/auth/subdivisions/', { params }),
+  create: (data) => api.post('/auth/subdivisions/', data),
+  update: (id, data) => api.patch(`/auth/subdivisions/${id}/`, data),
+  delete: (id) => api.delete(`/auth/subdivisions/${id}/`),
 };
 
 export const positionsAPI = {
@@ -38,8 +50,7 @@ export const positionsAPI = {
 export const promotionRequestsAPI = {
   list: (params) => api.get('/auth/promotion-requests/', { params }),
   create: (data) => api.post('/auth/promotion-requests/', data),
-  approve: (id, data) => api.post(`/auth/promotion-requests/${id}/approve/`, data),
-  reject: (id, data) => api.post(`/auth/promotion-requests/${id}/reject/`, data),
+  action: (id, action) => api.post(`/auth/promotion-requests/${id}/${action}/`),
 };
 
 export const orgStructureAPI = {

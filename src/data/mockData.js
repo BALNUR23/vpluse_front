@@ -1,229 +1,29 @@
-// Mock users
-export const USERS = [
-  { id: 1, name: 'Алексей Петров', email: 'alex.p@vpluse.kg', role: 'intern', department: 'Разработка', subdivision: 'Frontend', position: 'Frontend-разработчик', phone: '+996 555 123 456', telegram: '@alex_petrov', avatar: null, status: 'active' },
-  { id: 2, name: 'Иван С.', email: 'ivan.s@vpluse.kg', role: 'projectmanager', department: 'Продажи', subdivision: 'Отдел продаж', position: 'Руководитель', phone: '+996 555 200 100', telegram: '@ivan_sales', avatar: null, status: 'active' },
-  { id: 3, name: 'Айна Т.', email: 'aina.t@vpluse.kg', role: 'intern', department: 'Маркетинг', subdivision: 'SMM', position: 'SMM-специалист', phone: '+996 555 300 200', telegram: '@aina_t', avatar: null, status: 'active' },
-  { id: 4, name: 'Елена М.', email: 'elena.m@vpluse.kg', role: 'admin', department: 'HR', subdivision: 'Подбор персонала', position: 'HR-менеджер', phone: '+996 555 400 300', telegram: '@elena_hr', avatar: null, status: 'active' },
-  { id: 5, name: 'Дмитрий К.', email: 'dmitry.k@vpluse.kg', role: 'intern', department: 'Логистика', subdivision: 'Снабжение', position: 'Менеджер', phone: '+996 555 500 400', telegram: '@dmitry_k', avatar: null, status: 'blocked' },
-  { id: 6, name: 'Мария К.', email: 'maria.k@vpluse.kg', role: 'superadmin', department: 'Управление', subdivision: 'Администрирование', position: 'Суперадминистратор', phone: '+996 555 600 500', telegram: '@maria_k', avatar: null, status: 'active' },
-  { id: 7, name: 'Айбек У.', email: 'aibek.u@vpluse.kg', role: 'employee', department: 'Отдел холодных продаж', subdivision: 'Холодные звонки', position: 'Менеджер продаж', phone: '+996 700 200 300', telegram: '@aibek_u', avatar: null, status: 'active' },
-  { id: 8, name: 'Султан М.', email: 'sultan.m@vpluse.kg', role: 'employee', department: 'Отдел маркетинга', subdivision: 'Контент', position: 'Специалист отдела', phone: '+996 999 555 194', telegram: '@sultan_m', avatar: null, status: 'active' },
-  { id: 9, name: 'Админ А.', email: 'admin@vpluse.kg', role: 'superadmin', department: 'Управление', subdivision: 'Администрирование', position: 'Администратор (полный доступ)', phone: '+996 555 900 100', telegram: '@admin_full', avatar: null, status: 'active' },
-];
+// Mock data removed — replaced with real API
 
-export const CURRENT_USER_INTERN = USERS[0];
-export const CURRENT_USER_ADMIN = USERS[1];
-export const CURRENT_USER_SUPERADMIN = USERS[5];
+export const USERS = [];
+export const CURRENT_USER_INTERN = null;
+export const CURRENT_USER_ADMIN = null;
+export const CURRENT_USER_SUPERADMIN = null;
 
-// Mock news
-export const NEWS = [
-  { id: 1, title: 'Итоги стратегической сессии 2025', text: 'Обсудили планы развития компании на ближайшие 3 года и утвердили ключевые цели.', date: '25 Января 2025', category: 'Новости компании', img: 'https://images.unsplash.com/photo-1560439513-74b037a25d84?w=400&h=200&fit=crop' },
-  { id: 2, title: 'Запуск новой системы мотивации', text: 'С 1 февраля вступает в силу обновлённая система KPI для всех отделов продаж.', date: '01 Февраля 2025', category: 'HR', img: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=200&fit=crop' },
-  { id: 3, title: 'Корпоратив в честь дня рождения компании', text: 'Приглашаем всех сотрудников на празднование 5-летия компании в эту пятницу.', date: '15 Марта 2025', category: 'Мероприятия', img: 'https://images.unsplash.com/photo-1531058020387-3be344556be6?w=400&h=200&fit=crop' },
-];
-
-// Mock regulations
-export const REGULATIONS = [
-  {
-    id: 1,
-    title: 'База знаний',
-    desc: 'База знаний компании в формате PDF.',
-    type: 'pdf',
-    size: '325 KB',
-    deadline: '2026-03-01',
-    url: '/reglam/База знаний _ Platrum.pdf',
-    color: '#FEE2E2',
-    iconColor: '#DC2626'
-  },
-  {
-    id: 2,
-    title: 'Инструкция о соблюдении мер пожарной безопасности',
-    desc: 'Порядок соблюдения мер пожарной безопасности на объекте ОсОО.',
-    type: 'pdf',
-    size: '475 KB',
-    deadline: '2026-03-02',
-    url: '/reglam/Инструкция_о_соблюдении_мер_пожарной_безопасности_на_объекте_ОсОО.pdf',
-    color: '#FEF9C3',
-    iconColor: '#D97706'
-  },
-  {
-    id: 3,
-    title: 'Инструкция по оказанию первой помощи',
-    desc: 'Инструкция по оказанию первой помощи пострадавшим при несчастных случаях.',
-    type: 'pdf',
-    size: '710 KB',
-    deadline: '2026-03-03',
-    url: '/reglam/Инструкция_по_оказанию_первой_помощи_пострадавшим_при_несчастных.pdf',
-    color: '#DBEAFE',
-    iconColor: '#2563EB'
-  },
-  {
-    id: 4,
-    title: 'Положение о дисциплинарной ответственности',
-    desc: 'Положение о дисциплинарной ответственности в ОсОО «В плюсе».',
-    type: 'pdf',
-    size: '572 KB',
-    deadline: '2026-03-04',
-    url: '/reglam/Положение_о_дисциплинарной_ответственности_ОсОО_В_плюсе_База_знаний.pdf',
-    color: '#FEE2E2',
-    iconColor: '#DC2626'
-  },
-  {
-    id: 5,
-    title: 'Положение о дресс-коде',
-    desc: 'Требования к корпоративному внешнему виду сотрудников.',
-    type: 'pdf',
-    size: '304 KB',
-    deadline: '2026-03-05',
-    url: '/reglam/Положение_о_дресс_коде_ОсОО_«В_плюсе»_База_знаний_Platrum.pdf',
-    color: '#EDE9FE',
-    iconColor: '#7C3AED'
-  },
-  {
-    id: 6,
-    title: 'Положение о порядке обучения охране труда',
-    desc: 'Порядок обучения охране труда и проверки знаний требований.',
-    type: 'pdf',
-    size: '228 KB',
-    deadline: '2026-03-06',
-    url: '/reglam/Положение_о_порядке_обучения_охране_труда_и_проверки_знаний_требованиям.pdf',
-    color: '#D1FAE5',
-    iconColor: '#059669'
-  },
-  {
-    id: 7,
-    title: 'Положение о соблюдении чистоты и порядка',
-    desc: 'Правила поддержания чистоты и порядка в офисе ОсОО «В плюсе».',
-    type: 'pdf',
-    size: '240 KB',
-    deadline: '2026-03-07',
-    url: '/reglam/Положение_о_соблюдении_чистоты_и_порядка_в_офисе_ОсОО_«В_плюсе».pdf',
-    color: '#F3F4F6',
-    iconColor: '#6B7280'
-  },
-  {
-    id: 8,
-    title: 'Положение о субординации и деловом поведении',
-    desc: 'Регламент субординации и делового поведения сотрудников.',
-    type: 'pdf',
-    size: '1.8 MB',
-    deadline: '2026-03-08',
-    url: '/reglam/Положение_о_субординации_и_деловом_поведении_в_ОсОО_«В_плюсе»_База.pdf',
-    color: '#DBEAFE',
-    iconColor: '#2563EB'
-  },
-  {
-    id: 9,
-    title: 'Правила эксплуатации офисной техники',
-    desc: 'Инструкция по безопасной и корректной эксплуатации офисной техники.',
-    type: 'pdf',
-    size: '496 KB',
-    deadline: '2026-03-09',
-    url: '/reglam/Правила_эксплуатации_офисной_техники_в_ОсОО_«В_плюсе»_База_знаний.pdf',
-    color: '#FEF9C3',
-    iconColor: '#D97706'
-  },
-  {
-    id: 10,
-    title: 'Регламент санитарной безопасности',
-    desc: 'Санитарная безопасность и поведение при заболеваниях.',
-    type: 'pdf',
-    size: '3.2 MB',
-    deadline: '2026-03-10',
-    url: '/reglam/Регламент_санитарной_безопасности_и_поведения_при_заболеваниях_ОсОО.pdf',
-    color: '#FEE2E2',
-    iconColor: '#DC2626'
-  },
-];
-
-// Mock onboarding days
-export const ONBOARDING_DAYS = [
-  {
-    id: 1, dayNumber: 1, title: 'Знакомство с компанией',
-    stage: 'Введение в корпоративную культуру',
-    deadline: 'сегодня 18:00',
-    goals: ['Изучить историю и миссию компании «В Плюсе».', 'Ознакомиться с ключевыми регламентами и правилами внутреннего распорядка.', 'Настроить рабочее окружение и получить доступы к корпоративным ресурсам.'],
-    instructions: 'Добро пожаловать в первый день стажировки! Сегодняшний день посвящён погружению в нашу среду. Пожалуйста, внимательно изучите прикреплённые ниже материалы. После изучения всех документов посмотрите видео-приветствие от генерального директора. В конце дня вам необходимо заполнить и отправить отчёт в соседней вкладке.',
-    docs: [
-      { title: 'Кодекс корпоративной эт...', type: 'pdf', size: '2.4 MB', url: '/reglam/База знаний _ Platrum.pdf' },
-      { title: 'Структура компании (Miro)', type: 'link', url: 'https://miro.com/' },
-      { title: 'Правила внутреннего рас...', type: 'docx', size: '1.1 MB', url: '/reglam/Положение_о_субординации_и_деловом_поведении_в_ОсОО_«В_плюсе»_База.pdf' },
-    ],
-    taskTitles: ['Изучить регламент компании', 'Установить все рабочие инструменты'],
-    reportStatus: 'draft',
-  },
-  {
-    id: 2, dayNumber: 2, title: 'Знакомство с продуктом',
-    stage: 'Погружение в продукт',
-    deadline: 'завтра 18:00',
-    goals: ['Изучить продукт компании.', 'Поговорить с наставником.'],
-    instructions: 'Сегодня вы знакомитесь с нашим основным продуктом.',
-    docs: [],
-    taskTitles: ['Изучить презентацию продукта'],
-    reportStatus: null,
-  },
-];
-
-// Mock tasks
-export const TASKS = [
-  { id: 1, title: 'Спарсить всех АУ по ЕФРСБ/ББ', column: 'new', priority: 'high', assignee: USERS[0], reporter: USERS[1], date: '25 сент. 2025, 19:00', comments: 0 },
-  { id: 2, title: 'Ревизия CRM на ошибки', column: 'new', priority: 'high', assignee: USERS[0], reporter: USERS[1], date: '2025, 6 июня 18:00', comments: 0 },
-  { id: 3, title: 'Отправить Свете майндкарту', column: 'new', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: '28 мар. 2025, 22:00', comments: 0 },
-  { id: 4, title: 'Отрисовать схему работы битрикса Стасу', column: 'new', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: '28 мар. 2025, 20:45', comments: 0 },
-  { id: 5, title: 'на обновление ссылок ЕФРСБ у должников', column: 'new', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: null, comments: 1 },
-  { id: 6, title: 'на обновление ссылок ББ у должников', column: 'new', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: null, comments: 0 },
-  { id: 7, title: 'УК + ТСЖ собрать базы', column: 'inprogress', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: null, comments: 2 },
-  { id: 8, title: 'Собрать базу ликвидируемых компаний', column: 'inprogress', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: null, comments: 2 },
-  { id: 9, title: 'Собрать базу компаний на в процессе банкротства', column: 'inprogress', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: null, comments: 2 },
-  { id: 10, title: 'Ревизия CRM на ошибки', column: 'done', priority: 'high', assignee: USERS[0], reporter: USERS[1], date: '1 мар 2025, 19:00', comments: 0 },
-  { id: 11, title: 'Поставить систему смены статуса Нуром', column: 'done', priority: 'normal', assignee: USERS[0], reporter: USERS[1], date: '25 апр 2025', comments: 0 },
-];
-
+export const NEWS = [];
+export const REGULATIONS = [];
+export const ONBOARDING_DAYS = [];
+export const TASKS = [];
 export const KANBAN_COLUMNS = [
-  { id: 'new', title: 'Новые', color: '#22C55E', bg: '#DCFCE7' },
-  { id: 'inprogress', title: 'В работе', color: '#0EA5E9', bg: '#E0F2FE' },
-  { id: 'review', title: 'Ждут проверки', color: '#EAB308', bg: '#FEF9C3' },
-  { id: 'done', title: 'Завершённые', color: '#8B5CF6', bg: '#EDE9FE' },
-  { id: 'postponed', title: 'Отложенные', color: '#9CA3AF', bg: '#F3F4F6' },
+  { id: 'new',       title: 'Новые',           color: '#22C55E', bg: '#DCFCE7' },
+  { id: 'inprogress', title: 'В работе',       color: '#0EA5E9', bg: '#E0F2FE' },
+  { id: 'review',    title: 'Ждут проверки',   color: '#EAB308', bg: '#FEF9C3' },
+  { id: 'done',      title: 'Завершённые',     color: '#8B5CF6', bg: '#EDE9FE' },
+  { id: 'postponed', title: 'Отложенные',      color: '#9CA3AF', bg: '#F3F4F6' },
 ];
 
-// Mock attendance
-export const ATTENDANCE_USERS = [
-  { id: 1, name: 'Алексей Петров', position: 'Frontend-разработчик (Разработка)', avatar: null },
-  { id: 2, name: 'Айна Токтогулова', position: 'SMM-специалист (Маркетинг)', avatar: null },
-  { id: 3, name: 'Сергей Николаев', position: 'Менеджер продаж (Продажи)', avatar: null },
-  { id: 4, name: 'Нурлан Данияр', position: 'Парсер (Отдел маркетинга)', avatar: null },
-];
+export const ATTENDANCE_USERS = [];
+export const ATTENDANCE_DATA = {};
 
-// Feb 2026 attendance mock
-export const ATTENDANCE_DATA = {
-  1: { 3: 'present', 4: 'present', 5: 'present', 6: 'remote', 10: 'present', 11: 'present', 12: 'vacation', 13: 'vacation', 17: 'present', 18: 'present', 19: 'sick', 20: 'present' },
-  2: { 3: 'present', 4: 'remote', 5: 'present', 10: 'present', 11: 'present', 17: 'present', 18: 'present', 19: 'present', 20: 'remote' },
-  3: { 3: 'present', 4: 'present', 10: 'absent', 11: 'present', 17: 'present', 18: 'present' },
-  4: { 10: 'present', 11: 'present', 17: 'present', 18: 'present', 19: 'present' },
-};
+export const DEPARTMENTS = [];
 
-// Mock departments
-export const DEPARTMENTS = [
-  { id: 1, name: 'Продажи', parent: null, headName: 'Лиховцов Андрей Юрьевич', headRole: 'Генеральный директор', color: '#86EFAC' },
-  { id: 2, name: 'Отдел маркетинга', parent: 1, headName: 'Султаналиев Максат', headRole: 'Руководитель', color: '#FCA5A5' },
-  { id: 3, name: 'HR-D', parent: 1, headName: 'Михайличенко Екатерина', headRole: 'HR Менеджер', color: '#C4B5FD' },
-  { id: 4, name: 'ОКК', parent: 1, headName: 'Назаров Максим', headRole: 'Руководитель', color: '#F9A8D4' },
-  { id: 5, name: 'Отдел разработки', parent: 1, headName: 'Иван С.', headRole: 'CTO', color: '#93C5FD' },
-];
+export const KB_ARTICLES = [];
 
-// KB Articles
-export const KB_ARTICLES = [
-  { id: 1, title: 'База ботов отдела ОРКБ', category: '22 Отдел холодных продаж', views: 2, updatedAt: '09.02.2026, 19:53', author: 'Лиховцов Андрей' },
-  { id: 2, title: 'Регламент Менеджера отдела развития клиентск...', category: '22 Отдел холодных продаж', views: 2, updatedAt: '06.02.2026, 13:11', author: 'Чернышов Юрий' },
-  { id: 3, title: 'Регламент "Общие понятия сайта ЕФРСБ и стру...', category: '22 Отдел холодных продаж', views: 2, updatedAt: '05.02.2026, 15:22', author: 'Чернышов Юрий' },
-  { id: 4, title: 'Должностная инструкция Руководителя отдела п...', category: '2.1 Отдел маркетинга', views: 1, updatedAt: '27.01.2026, 20:12', author: 'Чернышов Юрий' },
-  { id: 5, title: 'Регламент по деятельности руководителя отдела...', category: '2.1 Отдел маркетинга', views: 1, updatedAt: '19.01.2026, 13:28', author: 'Чернышов Юрий' },
-  { id: 6, title: 'Корпоративная культура', category: 'Для всех сотрудников', views: 10, updatedAt: '09.02.2026, 19:53', author: 'Лиховцов Андрей' },
-  { id: 7, title: 'Условия, тарифы и ставки', category: '22 Отдел холодных продаж', views: 3, updatedAt: '05.02.2026, 15:22', author: 'Чернышов Юрий' },
-];
-
-// Metrics
 export const EFFICIENCY_METRICS = {
   tasks: { created: 0, comments: 0, open: 0, overdue: 0 },
   bpm: { launched: 0, actions: 0 },
@@ -231,27 +31,19 @@ export const EFFICIENCY_METRICS = {
   other: { finplanPending: 0, lostEquipment: 0, chatgptRequests: 0 },
 };
 
-// Work schedule
 export const WORK_SCHEDULE = {
-  workDays: 'Понедельник – Пятница',
-  hours: '09:00 – 18:00',
-  lunch: '13:00 – 14:00',
-  breaks: 'По согласованию с руководителем',
+  workDays: '—',
+  hours: '—',
+  lunch: '—',
+  breaks: '—',
 };
 
-// Roles
-export const ROLES = [
-  { id: 'superadmin', name: 'Суперадминистратор', desc: 'Полный доступ ко всем настройкам системы, управлению пользователями и техническим параметрам.', perms: ['Все права', 'Системные логи', 'Безопасность'], count: 2, isSystem: true },
-  { id: 'intern', name: 'Стажёр', desc: 'Базовый доступ для прохождения обучения. Ограничен просмотром контента и отправкой отчётов.', perms: ['Просмотр материалов', 'Отправка отчётов', 'Личный график'], count: 24, isSystem: true },
-  { id: 'content', name: 'Контент-менеджер', desc: 'Сотрудник, ответственный за наполнение базы знаний и обновление регламентов.', perms: ['Управление контентом', 'Регламенты', 'Инструкции'], count: 1, isSystem: false },
-  { id: 'curator', name: 'Куратор стажировки', desc: 'Отвечает за проверку отчётов стажёров, добавление новых пользователей и контроль онбординга.', perms: ['Управление пользователями', 'Проверка отчётов', 'Онбординг'], count: 3, isSystem: false },
-];
+export const ROLES = [];
 
-// Admin panel content modules
 export const CONTENT_MODULES = [
-  { id: 'news', icon: '📰', color: '#FEF3C7', title: 'Новости компании', desc: 'Публикация новостей, событий и объявлений для сотрудников. Управление слайдером на главной странице.', stat: '12 опубликовано', link: 'Перейти →' },
-  { id: 'welcome', icon: '📣', color: '#D1FAE5', title: 'Приветственный блок', desc: 'Настройка приветственного сообщения и вводной информации для новых пользователей на дашборде.', stat: 'Обновлено вчера', link: 'Редактировать →' },
-  { id: 'instruction', icon: '📚', color: '#EDE9FE', title: 'Инструкция по платформе', desc: 'Управление разделом "Инструкция". Загрузка PDF файлов, редактирование текста руководства.', stat: '● Активна', link: 'Перейти →' },
-  { id: 'team', icon: '👥', color: '#FEE2E2', title: 'Сотрудники и Команда', desc: 'Добавление и редактирование карточек сотрудников для слайдера "Наша команда" на главной.', stat: '48 сотрудников', link: 'Управление →' },
-  { id: 'regs', icon: '📄', color: '#FEF9C3', title: 'Регламенты', desc: 'База знаний компании. Загрузка документов, добавление внешних ссылок на регламенты.', stat: '24 документа', link: 'Перейти →' },
+  { id: 'news',        icon: '📰', color: '#FEF3C7', title: 'Новости компании',        desc: 'Публикация новостей, событий и объявлений для сотрудников.',            stat: '', link: 'Перейти →' },
+  { id: 'welcome',     icon: '📣', color: '#D1FAE5', title: 'Приветственный блок',      desc: 'Настройка приветственного сообщения для новых пользователей.',          stat: '', link: 'Редактировать →' },
+  { id: 'instruction', icon: '📚', color: '#EDE9FE', title: 'Инструкция по платформе', desc: 'Управление разделом "Инструкция". Загрузка PDF файлов.',                stat: '', link: 'Перейти →' },
+  { id: 'team',        icon: '👥', color: '#FEE2E2', title: 'Сотрудники и Команда',    desc: 'Добавление и редактирование карточек сотрудников.',                     stat: '', link: 'Управление →' },
+  { id: 'regs',        icon: '📄', color: '#FEF9C3', title: 'Регламенты',               desc: 'База знаний компании. Загрузка документов и внешних ссылок.',           stat: '', link: 'Перейти →' },
 ];

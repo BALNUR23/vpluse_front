@@ -49,10 +49,7 @@ export default function AdminContent() {
 }
 
 function GenericModuleManage({ module, onBack }) {
-  const [items, setItems] = useState([
-    { id: 1, title: `${module.title}: материал 1`, desc: 'Текущая запись модуля', date: '27 фев. 2026' },
-    { id: 2, title: `${module.title}: материал 2`, desc: 'Текущая запись модуля', date: '26 фев. 2026' },
-  ]);
+  const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({ title: '', desc: '' });

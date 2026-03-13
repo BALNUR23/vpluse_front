@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import MainLayout from '../../layouts/MainLayout';
-import { DEPARTMENTS } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
+import { DEPARTMENTS } from '../../data/mockData';
 import { orgStructureAPI } from '../../api/auth';
 
 const ORG_STORAGE_KEY = 'vpluse_company_structure_v1';
@@ -31,17 +31,7 @@ const flattenTree = (items = []) => {
 };
 
 const createDefaultNodes = (users = []) => {
-  const nodes = [
-    {
-      id: 1,
-      name: 'Генеральный директор',
-      parentId: null,
-      headName: 'Лиховцов Андрей Юрьевич',
-      headRole: 'Генеральный директор',
-      description: 'Руководство компанией и стратегическое управление.',
-      color: '#a3e635',
-    },
-  ];
+  const nodes = [];
 
   const byId = new Map();
   DEPARTMENTS.forEach((dep, idx) => {

@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../layouts/MainLayout';
-import { Plus, Trash2, Camera, Save, Check } from 'lucide-react';
+import { Plus, Trash2, Camera, Save, Check, Eye, EyeOff } from 'lucide-react';
+import { authAPI, departmentsAPI, subdivisionsAPI, positionsAPI } from '../../api/auth';
 
 const ROLE_META = {
   intern:         { label: 'Стажёр',             color: '#2563EB', bg: 'linear-gradient(135deg,#DBEAFE,#EDE9FE)' },
@@ -11,76 +12,188 @@ const ROLE_META = {
   superadmin:     { label: 'Суперадминистратор', color: '#BE123C', bg: 'linear-gradient(135deg,#FECDD3,#FED7AA)' },
 };
 
-const DEPARTMENTS = ['Разработка','Отдел маркетинга','Отдел холодных продаж','HR','Управление','Логистика','ОКК'];
-const POSITIONS   = ['Frontend-разработчик','Backend-разработчик','Стажёр','SMM-специалист','Проект-менеджер','Менеджер продаж','HR-менеджер','Руководитель отдела','Суперадминистратор'];
-
-// ── SuperAdmin: manage departments & positions ────────────────────────────
+// ── SuperAdmin: manage departments, subdivisions & positions ──────────────
 function OrgSection() {
-  const [departments, setDepts] = useState(DEPARTMENTS.map((n,i)=>({id:i+1,name:n})));
-  const [positions,   setPos]   = useState(POSITIONS.map((n,i)=>({id:i+1,name:n,dept:DEPARTMENTS[i%DEPARTMENTS.length]})));
-  const [tab, setTab]     = useState('depts');
-  const [newDept, setND]  = useState('');
-  const [newPos,  setNP]  = useState('');
-  const [newPD,   setNPD] = useState(DEPARTMENTS[0]);
-  const [saved,   setSaved] = useState(false);
+  const [departments,  setDepts]  = useState([]);
+  const [subdivisions, setSubs]   = useState([]);
+  const [positions,    setPos]    = useState([]);
+  const [tab,    setTab]    = useState('depts');
+  const [newName, setNew]   = useState('');
+  const [newDeptId, setNDI] = useState('');
+  const [toast,  setToast]  = useState(null);
 
-  const addDept = () => { if (!newDept.trim()) return; setDepts(d=>[...d,{id:Date.now(),name:newDept.trim()}]); setND(''); };
-  const addPos  = () => { if (!newPos.trim())  return; setPos(p=>[...p,{id:Date.now(),name:newPos.trim(),dept:newPD}]); setNP(''); };
-  const save = () => { setSaved(true); setTimeout(()=>setSaved(false),2000); };
+  const showToast = (msg, type='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),2000); };
+
+  const load = () => {
+    departmentsAPI.list().then(r => setDepts(Array.isArray(r.data) ? r.data : r.data.results || [])).catch(()=>{});
+    subdivisionsAPI.list().then(r => setSubs(Array.isArray(r.data) ? r.data : r.data.results || [])).catch(()=>{});
+    positionsAPI.list().then(r => setPos(Array.isArray(r.data) ? r.data : r.data.results || [])).catch(()=>{});
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const addDept = async () => {
+    if (!newName.trim()) return;
+    try {
+      const r = await departmentsAPI.create({ name: newName.trim() });
+      setDepts(d => [...d, r.data]);
+      setNew('');
+      showToast('Отдел добавлен');
+    } catch { showToast('Ошибка', 'error'); }
+  };
+
+  const delDept = async (id) => {
+    try {
+      await departmentsAPI.delete(id);
+      setDepts(d => d.filter(x => x.id !== id));
+      showToast('Удалено');
+    } catch { showToast('Ошибка удаления', 'error'); }
+  };
+
+  const addSub = async () => {
+    if (!newName.trim() || !newDeptId) return;
+    try {
+      const r = await subdivisionsAPI.create({ name: newName.trim(), department_id: Number(newDeptId) });
+      setSubs(s => [...s, r.data]);
+      setNew('');
+      showToast('Подразделение добавлено');
+    } catch { showToast('Ошибка', 'error'); }
+  };
+
+  const delSub = async (id) => {
+    try {
+      await subdivisionsAPI.delete(id);
+      setSubs(s => s.filter(x => x.id !== id));
+      showToast('Удалено');
+    } catch { showToast('Ошибка удаления', 'error'); }
+  };
+
+  const addPos = async () => {
+    if (!newName.trim()) return;
+    try {
+      const r = await positionsAPI.create({ name: newName.trim(), department_id: newDeptId ? Number(newDeptId) : undefined });
+      setPos(p => [...p, r.data]);
+      setNew('');
+      showToast('Должность добавлена');
+    } catch { showToast('Ошибка', 'error'); }
+  };
+
+  const delPos = async (id) => {
+    try {
+      await positionsAPI.delete(id);
+      setPos(p => p.filter(x => x.id !== id));
+      showToast('Удалено');
+    } catch { showToast('Ошибка удаления', 'error'); }
+  };
+
+  const items     = tab === 'depts' ? departments : tab === 'subs' ? subdivisions : positions;
+  const onAdd     = tab === 'depts' ? addDept : tab === 'subs' ? addSub : addPos;
+  const onDel     = tab === 'depts' ? delDept : tab === 'subs' ? delSub : delPos;
+  const needsDept = tab !== 'depts';
 
   return (
-    <div className="card" style={{marginTop:20}}>
-      <div className="card-header" style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+    <div className="card" style={{ marginTop: 20 }}>
+      <div className="card-header">
         <span className="card-title">🏢 Структура компании</span>
-        <button className="btn btn-primary btn-sm" onClick={save} style={{display:'flex',alignItems:'center',gap:6}}>
-          {saved ? <><Check size={14}/> Сохранено</> : <><Save size={14}/> Сохранить</>}
-        </button>
       </div>
       <div className="card-body">
-        <div className="tabs" style={{marginBottom:16}}>
-          <button className={`tab-btn ${tab==='depts'?'active':''}`} onClick={()=>setTab('depts')}>Отделы ({departments.length})</button>
-          <button className={`tab-btn ${tab==='pos'?'active':''}`}   onClick={()=>setTab('pos')}>Должности ({positions.length})</button>
+        <div className="tabs" style={{ marginBottom: 16 }}>
+          <button className={`tab-btn ${tab==='depts'?'active':''}`} onClick={()=>{setTab('depts');setNew('');}}>Отделы ({departments.length})</button>
+          <button className={`tab-btn ${tab==='subs'?'active':''}`}  onClick={()=>{setTab('subs');setNew('');}}>Подразделения ({subdivisions.length})</button>
+          <button className={`tab-btn ${tab==='pos'?'active':''}`}   onClick={()=>{setTab('pos');setNew('');}}>Должности ({positions.length})</button>
         </div>
 
-        {tab==='depts' && (
-          <>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:16}}>
-              {departments.map(d=>(
-                <div key={d.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:'var(--gray-50)',borderRadius:'var(--radius)',border:'1px solid var(--gray-200)'}}>
-                  <span style={{fontSize:13,fontWeight:500}}>🏬 {d.name}</span>
-                  <button onClick={()=>setDepts(ds=>ds.filter(x=>x.id!==d.id))} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',padding:2}}><Trash2 size={13}/></button>
-                </div>
-              ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 16 }}>
+          {items.map(item => (
+            <div key={item.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px', background:'var(--gray-50)', borderRadius:'var(--radius)', border:'1px solid var(--gray-200)' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500 }}>{item.name}</div>
+                {item.department_name && <div style={{ fontSize: 11, color: 'var(--gray-400)' }}>{item.department_name}</div>}
+              </div>
+              <button onClick={() => onDel(item.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--danger)', padding:2 }}><Trash2 size={13}/></button>
             </div>
-            <div style={{display:'flex',gap:8}}>
-              <input className="form-input" placeholder="Название нового отдела" value={newDept} onChange={e=>setND(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addDept()} style={{flex:1}}/>
-              <button className="btn btn-primary btn-sm" onClick={addDept}><Plus size={14}/> Добавить</button>
-            </div>
-          </>
-        )}
+          ))}
+        </div>
 
-        {tab==='pos' && (
-          <>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:16}}>
-              {positions.map(p=>(
-                <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:'var(--gray-50)',borderRadius:'var(--radius)',border:'1px solid var(--gray-200)'}}>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:500}}>👤 {p.name}</div>
-                    <div style={{fontSize:11,color:'var(--gray-400)'}}>{p.dept}</div>
-                  </div>
-                  <button onClick={()=>setPos(ps=>ps.filter(x=>x.id!==p.id))} style={{background:'none',border:'none',cursor:'pointer',color:'var(--danger)',padding:2}}><Trash2 size={13}/></button>
-                </div>
-              ))}
-            </div>
-            <div style={{display:'flex',gap:8}}>
-              <input className="form-input" placeholder="Название должности" value={newPos} onChange={e=>setNP(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addPos()} style={{flex:1}}/>
-              <select className="form-select" value={newPD} onChange={e=>setNPD(e.target.value)} style={{width:180}}>
-                {departments.map(d=><option key={d.id}>{d.name}</option>)}
-              </select>
-              <button className="btn btn-primary btn-sm" onClick={addPos}><Plus size={14}/> Добавить</button>
-            </div>
-          </>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input className="form-input" placeholder={`Название${tab==='depts'?' отдела':tab==='subs'?' подразделения':' должности'}`}
+            value={newName} onChange={e => setNew(e.target.value)} onKeyDown={e => e.key==='Enter' && onAdd()} style={{ flex: 1 }} />
+          {needsDept && (
+            <select className="form-select" value={newDeptId} onChange={e => setNDI(e.target.value)} style={{ width: 180 }}>
+              <option value="">Отдел</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          )}
+          <button className="btn btn-primary btn-sm" onClick={onAdd}><Plus size={14}/> Добавить</button>
+        </div>
+
+        {toast && (
+          <div style={{ marginTop: 10, fontSize: 13, color: toast.type === 'error' ? 'var(--danger)' : 'var(--success)' }}>{toast.msg}</div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Password Change Section ───────────────────────────────────────────────
+function PasswordSection() {
+  const [form, setForm] = useState({ old_password: '', new_password: '', confirm: '' });
+  const [show, setShow] = useState(false);
+  const [msg, setMsg]   = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = async (e) => {
+    e.preventDefault();
+    if (form.new_password !== form.confirm) { setMsg({ text: 'Пароли не совпадают', type: 'error' }); return; }
+    if (form.new_password.length < 6) { setMsg({ text: 'Минимум 6 символов', type: 'error' }); return; }
+    setSaving(true);
+    try {
+      await authAPI.changePassword({ old_password: form.old_password, new_password: form.new_password });
+      setMsg({ text: 'Пароль успешно изменён', type: 'success' });
+      setForm({ old_password: '', new_password: '', confirm: '' });
+      setTimeout(() => setMsg(null), 3000);
+    } catch (err) {
+      const d = err.response?.data;
+      setMsg({ text: d?.old_password?.[0] || d?.new_password?.[0] || d?.detail || 'Ошибка изменения пароля', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ marginTop: 20 }}>
+      <div className="card-header"><span className="card-title">🔒 Смена пароля</span></div>
+      <div className="card-body">
+        <form onSubmit={handleChange}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              { key: 'old_password', label: 'Текущий пароль' },
+              { key: 'new_password', label: 'Новый пароль' },
+              { key: 'confirm',      label: 'Повторите новый пароль' },
+            ].map(({ key, label }) => (
+              <div className="form-group" key={key}>
+                <label className="form-label">{label}</label>
+                <div style={{ position: 'relative' }}>
+                  <input className="form-input" type={show ? 'text' : 'password'} value={form[key]}
+                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                    placeholder="••••••••" style={{ paddingRight: 36 }} />
+                  <button type="button" onClick={() => setShow(s => !s)}
+                    style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--gray-400)' }}>
+                    {show ? <EyeOff size={15}/> : <Eye size={15}/>}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {msg && (
+            <div style={{ marginTop: 10, fontSize: 13, color: msg.type === 'error' ? 'var(--danger)' : 'var(--success)' }}>{msg.text}</div>
+          )}
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Сохранение...' : 'Изменить пароль'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -92,35 +205,65 @@ export default function Profile() {
   const meta = ROLE_META[user?.role] || ROLE_META.intern;
   const fileRef = useRef();
 
+  const [departments, setDepartments] = useState([]);
+  const [positions,   setPositions]   = useState([]);
+
   const [form, setForm] = useState({
     name:       user?.name       || '',
-    department: user?.department_name || user?.department || '',
+    departmentId: user?.department || '',
     subdivision: user?.subdivision_name || user?.subdivision || '',
-    position:   user?.position_name   || user?.position   || '',
+    positionId: user?.position   || '',
     telegram:   user?.telegram   || '',
     phone:      user?.phone      || '',
   });
-  const [avatar,   setAvatar]  = useState(null);   // base64 preview
-  const [saved,    setSaved]   = useState(false);
-  const [errors,   setErrors]  = useState({});
+  const [avatar,  setAvatar]  = useState(null);
+  const [saved,   setSaved]   = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [errors,  setErrors]  = useState({});
+
+  useEffect(() => {
+    departmentsAPI.list().then(r => setDepartments(Array.isArray(r.data) ? r.data : r.data.results || [])).catch(()=>{});
+    positionsAPI.list().then(r => setPositions(Array.isArray(r.data) ? r.data : r.data.results || [])).catch(()=>{});
+  }, []);
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())       e.name       = 'Обязательное поле';
-    if (!form.department.trim()) e.department = 'Обязательное поле';
-    if (!form.subdivision.trim()) e.subdivision = 'Обязательное поле';
-    if (!form.position.trim())   e.position   = 'Обязательное поле';
+    if (!form.name.trim()) e.name = 'Обязательное поле';
     return e;
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const e2 = validate();
     if (Object.keys(e2).length) { setErrors(e2); return; }
     setErrors({});
-    updateUser?.(form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setSaving(true);
+    try {
+      const [firstName, ...rest] = form.name.trim().split(' ');
+      const payload = {
+        first_name: firstName,
+        last_name: rest.join(' '),
+        phone: form.phone,
+        telegram: form.telegram,
+        department: form.departmentId || null,
+        position: form.positionId || null,
+      };
+      const r = await authAPI.updateMe(payload);
+      updateUser?.({
+        ...r.data,
+        name: r.data.full_name || form.name,
+        department: r.data.department,
+        department_name: r.data.department_name,
+        position: r.data.position,
+        position_name: r.data.position_name,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setErrors({ name: 'Ошибка сохранения' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAvatar = (e) => {
@@ -131,11 +274,13 @@ export default function Profile() {
     reader.readAsDataURL(file);
   };
 
-  const initials = form.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || '??';
+  const initials = form.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase() || '??';
+  const deptName = departments.find(d => String(d.id) === String(form.departmentId))?.name || user?.department_name || '';
+  const posName  = positions.find(p => String(p.id) === String(form.positionId))?.name || user?.position_name || '';
 
   return (
     <MainLayout title="Личный кабинет">
-      <div style={{maxWidth:760}}>
+      <div style={{ maxWidth: 760 }}>
         <div className="page-header">
           <div>
             <div className="page-title">Личный кабинет</div>
@@ -144,121 +289,100 @@ export default function Profile() {
         </div>
 
         <div className="card">
-          {/* Cover */}
-          <div style={{height:100,background:meta.bg,borderRadius:'12px 12px 0 0',position:'relative'}}>
-            <div style={{position:'absolute',top:12,right:16,background:meta.color,color:'white',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:20}}>
+          <div style={{ height: 100, background: meta.bg, borderRadius: '12px 12px 0 0', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 12, right: 16, background: meta.color, color: 'white', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 20 }}>
               {meta.label}
             </div>
           </div>
 
-          <div className="card-body" style={{paddingTop:0}}>
-            {/* Avatar */}
-            <div style={{display:'flex',alignItems:'flex-end',gap:16,marginTop:-36,marginBottom:24}}>
-              <div style={{position:'relative',flexShrink:0}}>
-                <div className="avatar" style={{width:72,height:72,fontSize:24,border:'3px solid white',boxShadow:'var(--shadow)',background:avatar?'transparent':meta.color,overflow:'hidden'}}>
-                  {avatar
-                    ? <img src={avatar} alt="avatar" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                    : initials
-                  }
+          <div className="card-body" style={{ paddingTop: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginTop: -36, marginBottom: 24 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div className="avatar" style={{ width: 72, height: 72, fontSize: 24, border: '3px solid white', boxShadow: 'var(--shadow)', background: avatar ? 'transparent' : meta.color, overflow: 'hidden' }}>
+                  {avatar ? <img src={avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
                 </div>
-                <button onClick={()=>fileRef.current.click()}
-                  style={{position:'absolute',bottom:0,right:0,width:24,height:24,borderRadius:'50%',background:meta.color,border:'2px solid white',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  <Camera size={11} color="white"/>
+                <button onClick={() => fileRef.current.click()}
+                  style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%', background: meta.color, border: '2px solid white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Camera size={11} color="white" />
                 </button>
-                <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatar}/>
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatar} />
               </div>
-              <div style={{marginBottom:4}}>
-                <div style={{fontWeight:700,fontSize:16}}>{form.name || '—'}</div>
-                <div style={{fontSize:13,color:'var(--gray-500)'}}>{form.position} · {form.department} / {form.subdivision}</div>
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{form.name || '—'}</div>
+                <div style={{ fontSize: 13, color: 'var(--gray-500)' }}>{posName} · {deptName}</div>
               </div>
             </div>
 
-            {/* Read-only info */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:24,background:'var(--gray-50)',borderRadius:'var(--radius)',padding:'14px 16px'}}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24, background: 'var(--gray-50)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
               {[
-                {label:'Логин',      value: user?.login || user?.username || '—'},
-                {label:'Email',      value: user?.email || '—'},
-                {label:'Дата найма', value: user?.hireDate || user?.hire_date || '—'},
-              ].map(item=>(
+                { label: 'Логин',      value: user?.login || user?.username || '—' },
+                { label: 'Email',      value: user?.email || '—' },
+                { label: 'Дата найма', value: user?.hireDate || user?.hire_date || '—' },
+              ].map(item => (
                 <div key={item.label}>
-                  <div style={{fontSize:11,color:'var(--gray-400)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>{item.label}</div>
-                  <div style={{fontSize:13,fontWeight:500}}>{item.value}</div>
+                  <div style={{ fontSize: 11, color: 'var(--gray-400)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{item.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{item.value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Editable form */}
             <form onSubmit={handleSave}>
-              <div style={{fontSize:15,fontWeight:700,marginBottom:16}}>Персональные данные</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Персональные данные</div>
 
-              <div className="form-group" style={{marginBottom:16}}>
-                <label className="form-label">ФИО <span style={{color:'var(--danger)'}}>*</span></label>
-                <input className={`form-input ${errors.name?'input-error':''}`}
-                  value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}
-                  placeholder="Фамилия Имя Отчество"/>
-                {errors.name && <div style={{fontSize:12,color:'var(--danger)',marginTop:4}}>{errors.name}</div>}
+              <div className="form-group" style={{ marginBottom: 16 }}>
+                <label className="form-label">ФИО <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <input className={`form-input ${errors.name ? 'input-error' : ''}`}
+                  value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Фамилия Имя Отчество" />
+                {errors.name && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4 }}>{errors.name}</div>}
               </div>
 
-              <div className="grid-2" style={{marginBottom:16}}>
+              <div className="grid-2" style={{ marginBottom: 16 }}>
                 <div className="form-group">
-                  <label className="form-label">Отдел <span style={{color:'var(--danger)'}}>*</span></label>
-                  <select className={`form-select ${errors.department?'input-error':''}`}
-                    value={form.department} onChange={e=>setForm(f=>({...f,department:e.target.value}))}>
+                  <label className="form-label">Отдел</label>
+                  <select className="form-select" value={form.departmentId} onChange={e => setForm(f => ({ ...f, departmentId: e.target.value }))}>
                     <option value="">Выберите отдел</option>
-                    {DEPARTMENTS.map(d=><option key={d}>{d}</option>)}
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
-                  {errors.department && <div style={{fontSize:12,color:'var(--danger)',marginTop:4}}>{errors.department}</div>}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Подразделение <span style={{color:'var(--danger)'}}>*</span></label>
-                  <input className={`form-input ${errors.subdivision?'input-error':''}`}
-                    value={form.subdivision} onChange={e=>setForm(f=>({...f,subdivision:e.target.value}))}
-                    placeholder="Например: Frontend"/>
-                  {errors.subdivision && <div style={{fontSize:12,color:'var(--danger)',marginTop:4}}>{errors.subdivision}</div>}
+                  <label className="form-label">Должность</label>
+                  <select className="form-select" value={form.positionId} onChange={e => setForm(f => ({ ...f, positionId: e.target.value }))}>
+                    <option value="">Выберите должность</option>
+                    {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
                 </div>
               </div>
 
-              <div className="form-group" style={{marginBottom:16}}>
-                <label className="form-label">Должность <span style={{color:'var(--danger)'}}>*</span></label>
-                <select className={`form-select ${errors.position?'input-error':''}`}
-                  value={form.position} onChange={e=>setForm(f=>({...f,position:e.target.value}))}>
-                  <option value="">Выберите должность</option>
-                  {POSITIONS.map(p=><option key={p}>{p}</option>)}
-                </select>
-                {errors.position && <div style={{fontSize:12,color:'var(--danger)',marginTop:4}}>{errors.position}</div>}
-              </div>
-
-              <div className="grid-2" style={{marginBottom:24}}>
+              <div className="grid-2" style={{ marginBottom: 24 }}>
                 <div className="form-group">
                   <label className="form-label">Telegram</label>
-                  <input className="form-input" value={form.telegram}
-                    onChange={e=>setForm(f=>({...f,telegram:e.target.value}))} placeholder="@username"/>
+                  <input className="form-input" value={form.telegram} onChange={e => setForm(f => ({ ...f, telegram: e.target.value }))} placeholder="@username" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Телефон</label>
-                  <input className="form-input" value={form.phone}
-                    onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="+996 ..."/>
+                  <input className="form-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+996 ..." />
                 </div>
               </div>
 
-              <div style={{display:'flex',justifyContent:'flex-end',gap:10}}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button type="button" className="btn btn-secondary"
-                  onClick={()=>setForm({name:user?.name||'',department:user?.department_name||user?.department||'',subdivision:user?.subdivision_name||user?.subdivision||'',position:user?.position_name||user?.position||'',telegram:user?.telegram||'',phone:user?.phone||''})}>
+                  onClick={() => setForm({ name: user?.name || '', departmentId: user?.department || '', subdivision: user?.subdivision_name || '', positionId: user?.position || '', telegram: user?.telegram || '', phone: user?.phone || '' })}>
                   Сбросить
                 </button>
-                <button type="submit" className="btn btn-primary" style={{display:'flex',alignItems:'center',gap:6}}>
-                  {saved ? <><Check size={15}/> Сохранено!</> : <><Save size={15}/> Сохранить изменения</>}
+                <button type="submit" className="btn btn-primary" disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {saved ? <><Check size={15} /> Сохранено!</> : <><Save size={15} /> {saving ? 'Сохранение...' : 'Сохранить изменения'}</>}
                 </button>
               </div>
             </form>
           </div>
         </div>
 
+        <PasswordSection />
+
         {user?.role === 'intern' && (
           <div className="card" style={{ marginTop: 20 }}>
-            <div className="card-header">
-              <span className="card-title">Перевод в сотрудники</span>
-            </div>
+            <div className="card-header"><span className="card-title">Перевод в сотрудники</span></div>
             <div className="card-body">
               <div style={{ fontSize: 13, color: 'var(--gray-600)' }}>
                 Процесс перевода ведёт администратор: после завершения стажировки он отправляет запрос суперадминистратору на подтверждение роли сотрудника.
@@ -267,7 +391,6 @@ export default function Profile() {
           </div>
         )}
 
-        {/* SuperAdmin only */}
         {user?.role === 'superadmin' && <OrgSection />}
       </div>
     </MainLayout>

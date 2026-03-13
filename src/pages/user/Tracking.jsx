@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../layouts/MainLayout';
 import { Play, Square, Plus, X, Clock, Calendar, BarChart2, Trash2 } from 'lucide-react';
 
-const PROJECTS = ['Разработка платформы', 'Онбординг стажёров', 'Маркетинг', 'Внутренние задачи', 'Митинги'];
+const PROJECTS = [];
 
 const fmtTime = (sec) => {
   const h = Math.floor(sec / 3600);
@@ -21,23 +21,17 @@ const fmtDur = (sec) => {
 
 const today = () => new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-const INIT_LOGS = [
-  { id: 1, project: 'Разработка платформы', task: 'Верстка компонентов',      date: '23.02.2026', dur: 7200  },
-  { id: 2, project: 'Маркетинг',            task: 'Подготовка презентации',   date: '23.02.2026', dur: 3600  },
-  { id: 3, project: 'Митинги',              task: 'Еженедельный митинг',       date: '22.02.2026', dur: 2700  },
-  { id: 4, project: 'Разработка платформы', task: 'Code review',               date: '22.02.2026', dur: 5400  },
-  { id: 5, project: 'Онбординг стажёров',   task: 'Проверка отчётов',         date: '21.02.2026', dur: 1800  },
-];
+const INIT_LOGS = [];
 
 export default function Tracking() {
   const { user } = useAuth();
   const [logs,      setLogs]    = useState(INIT_LOGS);
   const [running,   setRunning] = useState(false);
   const [elapsed,   setElapsed] = useState(0);
-  const [project,   setProject] = useState(PROJECTS[0]);
+  const [project,   setProject] = useState('');
   const [taskName,  setTask]    = useState('');
   const [modal,     setModal]   = useState(false);
-  const [manForm,   setManForm] = useState({ project: PROJECTS[0], task: '', date: today(), hours: '', minutes: '' });
+  const [manForm,   setManForm] = useState({ project: '', task: '', date: today(), hours: '', minutes: '' });
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -72,7 +66,7 @@ export default function Tracking() {
     const dur = (parseInt(manForm.hours) || 0) * 3600 + (parseInt(manForm.minutes) || 0) * 60;
     if (!dur || !manForm.task.trim()) return;
     setLogs(l => [{ id: Date.now(), project: manForm.project, task: manForm.task, date: manForm.date, dur }, ...l]);
-    setManForm({ project: PROJECTS[0], task: '', date: today(), hours: '', minutes: '' });
+    setManForm({ project: '', task: '', date: today(), hours: '', minutes: '' });
     setModal(false);
   };
 

@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import MainLayout from '../../layouts/MainLayout';
-import { NEWS } from '../../data/mockData';
 import { X, Users, ClipboardCheck, TrendingUp, CheckSquare } from 'lucide-react';
-import { createFeedbackTicket } from '../../utils/feedbackStore';
+import { newsAPI, feedbackAPI } from '../../api/content';
 
 // Role-specific banner config
 const BANNERS = {
@@ -45,62 +44,53 @@ const BANNERS = {
   },
 };
 
-// Role-specific quick stats
 const QUICK_STATS = {
-  intern: [
-    { icon: '📋', label: 'День онбординга', value: '1 / 5', color: '#EFF6FF' },
-    { icon: '📄', label: 'Регламентов', value: '6', color: '#F0FDF4' },
-    { icon: '📊', label: 'Отчётов отправлено', value: '0', color: '#FAF5FF' },
-  ],
-  employee: [
-    { icon: '✅', label: 'Задач выполнено', value: '12', color: '#F0FDF4' },
-    { icon: '📅', label: 'Рабочих дней в месяце', value: '20', color: '#EFF6FF' },
-    { icon: '📄', label: 'Регламентов', value: '6', color: '#FFF7ED' },
-  ],
-  projectmanager: [
-    { icon: '👥', label: 'Подчинённых', value: '2', color: '#FAF5FF' },
-    { icon: '✅', label: 'Задач команды', value: '9', color: '#F0FDF4' },
-    { icon: '⚠️', label: 'Просрочено', value: '2', color: '#FFF1F2' },
-  ],
-  admin: [
-    { icon: '👤', label: 'Пользователей', value: '42', color: '#EFF6FF' },
-    { icon: '🎓', label: 'Стажёров', value: '28', color: '#F0FDF4' },
-    { icon: '📬', label: 'Обращений', value: '3', color: '#FFF7ED' },
-  ],
-  superadmin: [
-    { icon: '👤', label: 'Пользователей', value: '42', color: '#EFF6FF' },
-    { icon: '🛡️', label: 'Администраторов', value: '5', color: '#FFF7ED' },
-    { icon: '🔒', label: 'Заблокировано', value: '1', color: '#FFF1F2' },
-  ],
+  intern:        [{ icon: '📋', label: 'День онбординга', value: '—', color: '#EFF6FF' }, { icon: '📄', label: 'Регламентов', value: '—', color: '#F0FDF4' }, { icon: '📊', label: 'Отчётов отправлено', value: '—', color: '#FAF5FF' }],
+  employee:      [{ icon: '✅', label: 'Задач выполнено', value: '—', color: '#F0FDF4' }, { icon: '📅', label: 'Рабочих дней в месяце', value: '—', color: '#EFF6FF' }, { icon: '📄', label: 'Регламентов', value: '—', color: '#FFF7ED' }],
+  projectmanager:[{ icon: '👥', label: 'Подчинённых', value: '—', color: '#FAF5FF' }, { icon: '✅', label: 'Задач команды', value: '—', color: '#F0FDF4' }, { icon: '⚠️', label: 'Просрочено', value: '—', color: '#FFF1F2' }],
+  admin:         [{ icon: '👤', label: 'Пользователей', value: '—', color: '#EFF6FF' }, { icon: '🎓', label: 'Стажёров', value: '—', color: '#F0FDF4' }, { icon: '📬', label: 'Обращений', value: '—', color: '#FFF7ED' }],
+  superadmin:    [{ icon: '👤', label: 'Пользователей', value: '—', color: '#EFF6FF' }, { icon: '🛡️', label: 'Администраторов', value: '—', color: '#FFF7ED' }, { icon: '🔒', label: 'Заблокировано', value: '—', color: '#FFF1F2' }],
 };
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedNews, setSelectedNews] = useState(null);
+  const [news, setNews] = useState([]);
   const [fbType, setFbType] = useState('Предложение');
   const [fbText, setFbText] = useState('');
   const [fbMode, setFbMode] = useState('named');
   const [fbMsg, setFbMsg] = useState('');
+  const [fbSending, setFbSending] = useState(false);
 
   const fallbackRole = user?.role === 'intern' ? 'intern' : 'employee';
   const banner = BANNERS[user?.role] || BANNERS[fallbackRole];
   const stats = QUICK_STATS[user?.role] || QUICK_STATS[fallbackRole];
 
-  const sendFeedback = () => {
+  useEffect(() => {
+    newsAPI.list().then(res => setNews(Array.isArray(res.data) ? res.data : res.data.results || [])).catch(() => {});
+  }, []);
+
+  const sendFeedback = async () => {
     if (!fbText.trim()) return;
-    createFeedbackTicket({
-      type: fbType,
-      text: fbText.trim(),
-      user: user?.name || 'Пользователь',
-      userRole: user?.role || 'employee',
-      isAnonymous: fbMode === 'anonymous',
-    });
-    setFbText('');
-    setFbType('Предложение');
-    setFbMode('named');
-    setFbMsg('Обращение отправлено.');
-    setTimeout(() => setFbMsg(''), 2500);
+    setFbSending(true);
+    try {
+      await feedbackAPI.create({
+        type: fbType,
+        text: fbText.trim(),
+        is_anonymous: fbMode === 'anonymous',
+      });
+      setFbText('');
+      setFbType('Предложение');
+      setFbMode('named');
+      setFbMsg('Обращение отправлено.');
+      setTimeout(() => setFbMsg(''), 2500);
+    } catch {
+      setFbMsg('Ошибка отправки. Попробуйте снова.');
+      setTimeout(() => setFbMsg(''), 2500);
+    } finally {
+      setFbSending(false);
+    }
   };
 
   return (
@@ -138,15 +128,20 @@ export default function Dashboard() {
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 16 }}>Актуальные новости</h2>
         <div className="news-grid">
-          {NEWS.map(n => (
+          {news.map(n => (
             <div key={n.id} className="news-card" onClick={() => setSelectedNews(n)}>
-              <img src={n.img} alt={n.title} className="news-card-img" onError={e => { e.target.style.display = 'none'; }} />
+              {(n.img || n.image) && (
+                <img src={n.img || n.image} alt={n.title} className="news-card-img" onError={e => { e.target.style.display = 'none'; }} />
+              )}
               <div className="news-card-body">
                 <div className="news-card-title">{n.title}</div>
-                <div className="news-card-text">{n.text}</div>
+                <div className="news-card-text">{n.text || n.content || n.description || ''}</div>
               </div>
             </div>
           ))}
+          {news.length === 0 && (
+            <div style={{ color: 'var(--gray-400)', fontSize: 13 }}>Нет новостей</div>
+          )}
         </div>
       </div>
 
@@ -182,7 +177,9 @@ export default function Dashboard() {
                 <option value="anonymous">Анонимно</option>
               </select>
             </div>
-            <button className="btn btn-primary" onClick={sendFeedback}>Отправить</button>
+            <button className="btn btn-primary" onClick={sendFeedback} disabled={fbSending}>
+              {fbSending ? 'Отправка...' : 'Отправить'}
+            </button>
             {fbMsg && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--success)' }}>{fbMsg}</div>}
           </div>
         </div>
@@ -193,23 +190,8 @@ export default function Dashboard() {
             <span className="card-title">Наша команда</span>
           </div>
           <div className="card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {[
-                { name: 'Елена М.',  role: 'HR-менеджер',        color: '#F3D0D7' },
-                { name: 'Иван С.',   role: 'Рук. продаж',        color: '#D0E8F3' },
-                { name: 'Мария К.',  role: 'Суперадмин',         color: '#D0F3D7' },
-                { name: 'Султан М.', role: 'Тимлид маркетинга',  color: '#F3F0D0' },
-              ].map(p => (
-                <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--gray-50)', borderRadius: 'var(--radius)' }}>
-                  <div className="avatar" style={{ width: 36, height: 36, background: p.color, fontSize: 13 }}>
-                    {p.name.split(' ').map(x => x[0]).join('')}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>{p.role}</div>
-                  </div>
-                </div>
-              ))}
+            <div style={{ color: 'var(--gray-400)', fontSize: 13, padding: '12px 0' }}>
+              Данные загружаются из API
             </div>
           </div>
         </div>
@@ -225,14 +207,14 @@ export default function Dashboard() {
             </button>
             <div style={{ background: 'white', padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <span className="badge badge-blue">{selectedNews.category}</span>
-                <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>📅 {selectedNews.date}</span>
+                {(selectedNews.category || selectedNews.tag) && (
+                  <span className="badge badge-blue">{selectedNews.category || selectedNews.tag}</span>
+                )}
+                <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>📅 {selectedNews.date || selectedNews.published_at || selectedNews.created_at || ''}</span>
               </div>
               <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>{selectedNews.title}</h2>
               <p style={{ fontSize: 14, color: 'var(--gray-600)', lineHeight: 1.7 }}>
-                В прошедшие выходные в главном офисе компании «В Плюсе» состоялась ежегодная стратегическая сессия топ-менеджмента. Основной повесткой дня стало обсуждение векторов развития на 2025–2027 годы.
-                <br/><br/>
-                Мы утвердили амбициозные цели по масштабированию бизнеса и внедрению передовых технологий.
+                {selectedNews.content || selectedNews.text || selectedNews.description || ''}
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MainLayout from '../../layouts/MainLayout';
 import { Shield, Lock, Database, Activity, RefreshCw, AlertTriangle } from 'lucide-react';
 import {
@@ -10,8 +10,50 @@ import {
   setCurrentNetworkHint,
   toggleOfficeNetwork,
 } from '../../utils/officeNetwork';
+import { securityAPI } from '../../api/content';
+import { securityV1API } from '../../api/v1';
 
 export default function AdminSystem() {
+  const [securityLoading, setSecurityLoading] = useState({ unlock: false, forceLogout: false });
+  const [securityMsg, setSecurityMsg] = useState('');
+  const [systemLogs, setSystemLogs] = useState([]);
+
+  useEffect(() => {
+    securityV1API.systemLogs.list()
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setSystemLogs(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleUnlockUsers = async () => {
+    setSecurityLoading(s => ({ ...s, unlock: true }));
+    setSecurityMsg('');
+    try {
+      await securityAPI.unlockUsers();
+      setSecurityMsg('Пользователи разблокированы.');
+    } catch {
+      setSecurityMsg('Ошибка при разблокировке пользователей.');
+    } finally {
+      setSecurityLoading(s => ({ ...s, unlock: false }));
+    }
+  };
+
+  const handleForceLogout = async () => {
+    if (!window.confirm('Принудительно завершить сессии всех пользователей?')) return;
+    setSecurityLoading(s => ({ ...s, forceLogout: true }));
+    setSecurityMsg('');
+    try {
+      await securityAPI.forceLogout();
+      setSecurityMsg('Принудительный выход выполнен.');
+    } catch {
+      setSecurityMsg('Ошибка при выполнении принудительного выхода.');
+    } finally {
+      setSecurityLoading(s => ({ ...s, forceLogout: false }));
+    }
+  };
+
   const [settings, setSettings] = useState({
     sessionTimeout: '60',
     maxLoginAttempts: '5',
@@ -62,14 +104,6 @@ export default function AdminSystem() {
   };
 
   const activeCount = networks.filter((n) => n.active).length;
-
-  const AUDIT_LOG = [
-    { id: 1, action: 'Создан пользователь', actor: 'Мария К.', target: 'Иванов Иван', date: '20 фев. 2026, 14:32' },
-    { id: 2, action: 'Изменена роль', actor: 'Мария К.', target: 'Алексей П. → Администратор', date: '19 фев. 2026, 11:05' },
-    { id: 3, action: 'Деактивирован пользователь', actor: 'Иван С.', target: 'Дмитрий К.', date: '18 фев. 2026, 09:20' },
-    { id: 4, action: 'Добавлен регламент', actor: 'Елена М.', target: 'Кодекс корпоративной этики', date: '17 фев. 2026, 16:45' },
-    { id: 5, action: 'Изменены настройки безопасности', actor: 'Мария К.', target: 'Система', date: '15 фев. 2026, 10:00' },
-  ];
 
   return (
     <MainLayout title="Админ-панель · Система и безопасность">
@@ -141,9 +175,9 @@ export default function AdminSystem() {
               </div>
               {[
                 { label: 'Статус', value: '● Работает', color: 'var(--success)' },
-                { label: 'Версия', value: 'v1.0.0' },
-                { label: 'Последнее обновление', value: '20 фев. 2026' },
-                { label: 'Активных сессий', value: '12' },
+                { label: 'Версия', value: '—' },
+                { label: 'Последнее обновление', value: '—' },
+                { label: 'Активных сессий', value: '—' },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--gray-100)', fontSize: 13 }}>
                   <span style={{ color: 'var(--gray-500)' }}>{label}</span>
@@ -160,12 +194,19 @@ export default function AdminSystem() {
                 <span style={{ fontWeight: 700 }}>Опасная зона</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button className="btn btn-secondary" style={{ justifyContent: 'flex-start', gap: 8 }}>
-                  <RefreshCw size={14} /> Сбросить кэш системы
+                <button className="btn btn-secondary" style={{ justifyContent: 'flex-start', gap: 8 }}
+                  disabled={securityLoading.unlock} onClick={handleUnlockUsers}>
+                  <RefreshCw size={14} /> {securityLoading.unlock ? 'Разблокировка...' : 'Разблокировать пользователей'}
                 </button>
-                <button className="btn" style={{ background: 'var(--danger-light)', color: 'var(--danger)', border: 'none', justifyContent: 'flex-start', gap: 8 }}>
-                  <Lock size={14} /> Принудительный выход всех пользователей
+                <button className="btn" style={{ background: 'var(--danger-light)', color: 'var(--danger)', border: 'none', justifyContent: 'flex-start', gap: 8 }}
+                  disabled={securityLoading.forceLogout} onClick={handleForceLogout}>
+                  <Lock size={14} /> {securityLoading.forceLogout ? 'Выполняется...' : 'Принудительный выход всех пользователей'}
                 </button>
+                {securityMsg && (
+                  <div style={{ fontSize: 12, color: 'var(--gray-600)', padding: '6px 10px', background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 8 }}>
+                    {securityMsg}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -278,12 +319,14 @@ export default function AdminSystem() {
               <tr><th>Действие</th><th>Инициатор</th><th>Объект</th><th>Дата и время</th></tr>
             </thead>
             <tbody>
-              {AUDIT_LOG.map(log => (
+              {systemLogs.length === 0 ? (
+                <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--gray-400)', fontSize: 13, padding: 16 }}>Журнал пуст</td></tr>
+              ) : systemLogs.map(log => (
                 <tr key={log.id}>
-                  <td style={{ fontWeight: 500, fontSize: 13 }}>{log.action}</td>
-                  <td style={{ fontSize: 13 }}>{log.actor}</td>
-                  <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{log.target}</td>
-                  <td style={{ fontSize: 12, color: 'var(--gray-400)' }}>{log.date}</td>
+                  <td style={{ fontWeight: 500, fontSize: 13 }}>{log.action || log.event || log.type || '—'}</td>
+                  <td style={{ fontSize: 13 }}>{log.actor || log.user || log.username || '—'}</td>
+                  <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{log.target || log.object || log.description || '—'}</td>
+                  <td style={{ fontSize: 12, color: 'var(--gray-400)' }}>{log.created_at ? new Date(log.created_at).toLocaleString('ru-RU') : (log.date || '—')}</td>
                 </tr>
               ))}
             </tbody>

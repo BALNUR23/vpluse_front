@@ -1,6 +1,6 @@
 import MainLayout from '../../layouts/MainLayout';
-import { USERS } from '../../data/mockData';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { usersAPI } from '../../api/auth';
 
 const MODULES = [
   { id: 'content',    label: 'Контент (Главная, Инструкция, Регламенты)', desc: 'Новости, приветственные блоки, инструкции, регламенты.',         options: ['CRUD', 'Только просмотр'],                                       def: 'CRUD' },
@@ -11,10 +11,24 @@ const MODULES = [
   { id: 'system',     label: 'Система, безопасность, интерфейс',           desc: 'Доступ только у суперадмина, для админа всегда выключено.',       options: ['Система и безопасность', 'Настройки интерфейса'],               def: null },
 ];
 
-const admins = USERS.filter(u => u.role === 'admin' || u.role === 'superadmin');
-
 export default function AdminOverview() {
-  const [selectedAdmin, setSelectedAdmin] = useState(admins[0]);
+  const [admins, setAdmins] = useState([]);
+  const [selectedAdmin, setSelectedAdmin] = useState(null);
+
+  useEffect(() => {
+    usersAPI.list({ role: 'admin' })
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+        const normalized = data.map(u => ({
+          id: u.id,
+          name: u.full_name || u.username,
+          role: u.role,
+        }));
+        setAdmins(normalized);
+        if (normalized.length > 0) setSelectedAdmin(normalized[0]);
+      })
+      .catch(() => {});
+  }, []);
   const [moduleState, setModuleState] = useState({});
   const visibleModules = MODULES.filter((m) => {
     if (m.id !== 'system') return true;
@@ -33,7 +47,7 @@ export default function AdminOverview() {
             🛡️ Полный доступ · Суперадминистратор
           </span>
           <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
-            Активных: {USERS.filter(u => u.status === 'active').length} · Стажёров: {USERS.filter(u => u.role === 'intern').length}
+            Активных: — · Стажёров: —
           </div>
         </div>
       </div>
@@ -112,7 +126,7 @@ export default function AdminOverview() {
         <div className="card-body">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
-              { label: 'Пользователи', icon: '👥', count: USERS.length },
+              { label: 'Пользователи', icon: '👥', count: null },
               { label: 'Роли и права',  icon: '🛡️', count: null },
               { label: 'Контент',       icon: '📰', count: null },
               { label: 'Онбординг',     icon: '🎓', count: null },

@@ -5,3 +5,5 @@ dist/
 .vscode/
 .idea/
 *.log
+.claude
+node_modules

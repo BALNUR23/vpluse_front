@@ -1,8 +1,8 @@
 import MainLayout from '../../layouts/MainLayout';
-import { REGULATIONS } from '../../data/mockData';
 import { useEffect, useMemo, useState } from 'react';
 import { Download, ExternalLink, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { regulationsV1API } from '../../api/v1';
 
 const typeIcon = (type) => {
   if (type === 'pdf') return { icon: '📄', color: '#FEE2E2', iconColor: '#DC2626' };
@@ -13,28 +13,7 @@ const typeIcon = (type) => {
 const TESTS_KEY = 'vpluse_regulations_tests_v1';
 const READ_KEY = 'vpluse_regulations_read_v1';
 
-const TEST_QUESTIONS = {
-  default: [
-    {
-      id: 'q1',
-      text: 'Как нужно действовать при нарушении требований регламента?',
-      options: ['Игнорировать', 'Сообщить руководителю и следовать регламенту', 'Дождаться замечания'],
-      correct: 1,
-    },
-    {
-      id: 'q2',
-      text: 'Обязательно ли соблюдать регламенты компании?',
-      options: ['Да, для всех сотрудников', 'Только для стажёров', 'Нет, по желанию'],
-      correct: 0,
-    },
-    {
-      id: 'q3',
-      text: 'Что подтверждает прохождение регламента?',
-      options: ['Только открытие файла', 'Успешный результат теста', 'Устный ответ'],
-      correct: 1,
-    },
-  ],
-};
+const TEST_QUESTIONS = {};
 
 const readTests = () => {
   try {
@@ -101,12 +80,19 @@ export default function Regulations() {
   const { user } = useAuth();
   const isIntern = user?.role === 'intern';
 
+  const [regulations, setRegulations] = useState([]);
   const [previewDoc, setPreviewDoc] = useState(null);
   const [testDoc, setTestDoc] = useState(null);
   const [answers, setAnswers] = useState({});
   const [results, setResults] = useState({});
   const [readDone, setReadDone] = useState({});
   const [testMsg, setTestMsg] = useState('');
+
+  useEffect(() => {
+    regulationsV1API.list().then(res => {
+      setRegulations(Array.isArray(res.data) ? res.data : res.data.results || []);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -125,17 +111,20 @@ export default function Regulations() {
 
   const completeReading = () => {
     if (!user?.id || !previewDoc) return;
+    regulationsV1API.read(previewDoc.id).catch(() => {});
     setUserRead(user.id, previewDoc.id);
     setReadDone(getUserRead(user.id));
   };
 
   const submitTest = () => {
     if (!user?.id || !testDoc) return;
-    const total = questions.length;
+    const total = questions?.length || 0;
+    if (total === 0) return;
     const correct = questions.reduce((sum, q) => sum + (Number(answers[q.id]) === q.correct ? 1 : 0), 0);
     const score = Math.round((correct / total) * 100);
     const passed = score >= 70;
     const result = { passed, score, at: new Date().toLocaleString('ru-RU') };
+    regulationsV1API.quiz(testDoc.id, { answers, score, passed }).catch(() => {});
     setUserTestResult(user.id, testDoc.id, result);
     setResults(r => ({ ...r, [String(testDoc.id)]: result }));
     setTestMsg(passed ? `Тест пройден: ${score}%` : `Тест не пройден: ${score}%. Нужно минимум 70%.`);
@@ -151,7 +140,7 @@ export default function Regulations() {
       </div>
 
       <div className="reg-grid">
-        {REGULATIONS.map(reg => {
+        {regulations.map(reg => {
           const { icon, color } = typeIcon(reg.type);
           const testResult = results[String(reg.id)];
           const readMarked = Boolean(readDone[String(reg.id)]?.done);
@@ -194,7 +183,7 @@ export default function Regulations() {
                       <button
                         className="btn btn-outline btn-sm"
                         style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}
-                        onClick={() => setPreviewDoc(reg)}
+                        onClick={() => { setPreviewDoc(reg); regulationsV1API.view(reg.id).catch(() => {}); }}
                       >
                         <Globe size={13} /> Читать на сайте
                       </button>

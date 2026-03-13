@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import MainLayout from '../../layouts/MainLayout';
 import { useAuth } from '../../context/AuthContext';
@@ -8,6 +8,7 @@ import {
   getScheduleRequests,
   setAssignedSchedule,
 } from '../../utils/scheduleApproval';
+import { workSchedulesAPI } from '../../api/v1';
 
 const DAY_NAMES_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const DAY_NAMES_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
@@ -15,38 +16,7 @@ const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_ID_TO_KEY = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat', 7: 'sun' };
 const DAY_ID_TO_SHORT = { 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Вс' };
 
-const WEEKLY_FALLBACK = [
-  {
-    id: 'w1',
-    weekStart: '09 марта 2026 г.',
-    user: 'employee_test_22',
-    officeHours: 56,
-    onlineHours: 0,
-    status: 'Утвержден',
-    reviewedBy: 'Айсу',
-    updatedAt: '25 февраля 2026 г. 06:23',
-  },
-  {
-    id: 'w2',
-    weekStart: '02 марта 2026 г.',
-    user: 'employee_test_22',
-    officeHours: 56,
-    onlineHours: 0,
-    status: 'Утвержден',
-    reviewedBy: 'Айсу',
-    updatedAt: '25 февраля 2026 г. 06:23',
-  },
-  {
-    id: 'w3',
-    weekStart: '23 февраля 2026 г.',
-    user: 'emp_alina',
-    officeHours: 26,
-    onlineHours: 16,
-    status: 'Утвержден',
-    reviewedBy: 'Айсу',
-    updatedAt: '25 февраля 2026 г. 06:34',
-  },
-];
+const WEEKLY_FALLBACK = [];
 
 const defaultEditorDay = (mode = 'office') => ({
   from: mode === 'dayoff' ? '' : '09:00',
@@ -201,6 +171,7 @@ export default function AdminSchedules() {
   const isAdminOrSuper = canReview;
 
   const [tab, setTab] = useState('apps');
+  const [workSchedules, setWorkSchedules] = useState([]);
   const [refreshToken, setRefreshToken] = useState(0);
 
   const [searchWeekly, setSearchWeekly] = useState('');
@@ -214,6 +185,15 @@ export default function AdminSchedules() {
   const [editorMessage, setEditorMessage] = useState('');
 
   const forceRefresh = () => setRefreshToken((v) => v + 1);
+
+  useEffect(() => {
+    workSchedulesAPI.admin.templates.list()
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setWorkSchedules(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const requests = useMemo(() => getScheduleRequests(), [refreshToken]);
   const pendingRequests = requests.filter((r) => r.status === 'pending');
@@ -450,6 +430,7 @@ export default function AdminSchedules() {
             {tab === 'detail' && 'Детали сотрудника'}
             {tab === 'board' && 'Графики работы: неделя'}
             {tab === 'builder' && 'Календарь недельного плана'}
+            {tab === 'templates' && 'Шаблоны графиков'}
           </span>
         </div>
       )}
@@ -469,6 +450,9 @@ export default function AdminSchedules() {
                   </tr>
                   <tr>
                     <td style={{ cursor: 'pointer' }} onClick={() => setTab('board')}>Графики работы: неделя</td>
+                  </tr>
+                  <tr>
+                    <td style={{ cursor: 'pointer' }} onClick={() => setTab('templates')}>Шаблоны графиков</td>
                   </tr>
                 </tbody>
               </table>
@@ -762,6 +746,38 @@ export default function AdminSchedules() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'templates' && (
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Шаблоны графиков</span>
+          </div>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Рабочие дни</th>
+                  <th>Часы работы</th>
+                  <th>Обед</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workSchedules.length === 0 ? (
+                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--gray-400)' }}>Нет шаблонов</td></tr>
+                ) : workSchedules.map((ws) => (
+                  <tr key={ws.id}>
+                    <td style={{ fontWeight: 500 }}>{ws.name}</td>
+                    <td>{ws.work_days || ws.workDays || '—'}</td>
+                    <td>{ws.hours || (ws.start_time && ws.end_time ? `${ws.start_time} – ${ws.end_time}` : '—')}</td>
+                    <td>{ws.lunch || ws.lunch_break || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

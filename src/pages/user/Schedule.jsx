@@ -20,6 +20,8 @@ import {
   setCurrentNetworkHint,
   verifyOfficeNetworkByIp,
 } from '../../utils/officeNetwork';
+import { schedulesAPI } from '../../api/content';
+import { attendanceAPI, workSchedulesAPI } from '../../api/v1';
 
 const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const DAYS = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
@@ -104,6 +106,8 @@ export default function Schedule() {
     name: 'Индивидуальный график',
     workDays: 'Понедельник – Пятница',
   });
+  const [holidays, setHolidays] = useState(new Set());
+  const [calendarEvents, setCalendarEvents] = useState({});
   const [requestView, setRequestView] = useState('quick');
   const [customDays, setCustomDays] = useState([
     makeCustomDay(1, false),
@@ -155,6 +159,45 @@ export default function Schedule() {
   }, [user?.id]);
 
   useEffect(() => {
+    workSchedulesAPI.calendar({ year, month: month + 1 })
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || res.data.days || [];
+        const map = {};
+        data.forEach(item => {
+          const dateKey = item.date || item.day;
+          if (dateKey) map[dateKey] = item;
+        });
+        setCalendarEvents(map);
+      })
+      .catch(() => {});
+  }, [year, month]);
+
+  useEffect(() => {
+    workSchedulesAPI.my()
+      .then(res => {
+        const d = res.data;
+        const normalized = {
+          id: d.id || d.work_schedule?.id || 'custom_admin',
+          name: d.name || d.work_schedule?.name || d.schedule_name || 'Мой график',
+          workDays: d.work_days || d.work_schedule?.work_days || 'По дням недели',
+          hours: d.hours || d.work_schedule?.hours || 'По дням',
+          lunch: d.lunch || d.work_schedule?.lunch || '—',
+          breaks: d.breaks_description || d.work_schedule?.breaks || '—',
+          daysPlan: d.days_plan || d.work_schedule?.days_plan || [],
+        };
+        setAssignedSchedule(normalized);
+      })
+      .catch(() => {});
+
+    schedulesAPI.getHolidays(today.getFullYear())
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setHolidays(new Set(data.map(h => h.date)));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!canMarkAttendance || !user?.id) return;
     const tick = () => {
       if (isLateWithoutCheckIn(user.id, '09:00', 20) && !wasLateNotifiedToday(user.id)) {
@@ -198,9 +241,11 @@ export default function Schedule() {
       };
     }
 
-    const rec = setCheckIn(user.id, new Date().toISOString(), checkMeta);
+    const now = new Date().toISOString();
+    const rec = setCheckIn(user.id, now, checkMeta);
     setDayMark(rec);
     setLateAlert('');
+    attendanceAPI.checkIn({ time: now, mode: checkMeta.mode }).catch(() => {});
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
@@ -228,9 +273,11 @@ export default function Schedule() {
       };
     }
 
-    const rec = setCheckOut(user.id, new Date().toISOString(), checkMeta);
+    const now = new Date().toISOString();
+    const rec = setCheckOut(user.id, now, checkMeta);
     setDayMark(rec);
     setLateAlert('');
+    attendanceAPI.mark.create({ time: now, type: 'check_out', mode: checkMeta.mode }).catch(() => {});
   };
 
   const updateCustomDay = (dayId, patch) => {
@@ -310,6 +357,11 @@ export default function Schedule() {
       userRole: user.role,
       schedule: selected,
     });
+    workSchedulesAPI.select({
+      schedule_id: selected.id !== 'custom_admin' ? selected.id : undefined,
+      schedule_name: selected.name,
+      days_plan: selected.daysPlan || [],
+    }).catch(() => {});
     setHasPendingSchedule(true);
     setScheduleMsg('Заявка на график отправлена администратору/суперадминистратору.');
   };
@@ -378,6 +430,8 @@ export default function Schedule() {
                   ? `${year}-${String(month + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`
                   : '';
                 const selectedDateCell = cell.current && cellDateKey === selectedDateKey;
+                const isHoliday = cell.current && holidays.has(cellDateKey);
+                const calEvent = cell.current && calendarEvents[cellDateKey];
                 return (
                   <div
                     key={idx}
@@ -399,11 +453,14 @@ export default function Schedule() {
                         : <span style={{ color: weekend && cell.current ? 'var(--danger)' : !cell.current ? 'var(--gray-300)' : 'var(--gray-700)', fontWeight: 500 }}>{cell.day}</span>
                       }
                     </div>
-                    {cell.current && slot.isWork && (
-                      <div className="work-cell">{slot.label}</div>
+                    {cell.current && isHoliday && (
+                      <div className="work-cell off" style={{ color: 'var(--danger)', fontSize: 9 }}>Праздник</div>
                     )}
-                    {cell.current && !slot.isWork && (
-                      <div className="work-cell off">Вых</div>
+                    {cell.current && !isHoliday && slot.isWork && (
+                      <div className="work-cell">{calEvent?.label || slot.label}</div>
+                    )}
+                    {cell.current && !isHoliday && !slot.isWork && (
+                      <div className="work-cell off">{calEvent?.label || 'Вых'}</div>
                     )}
                   </div>
                 );

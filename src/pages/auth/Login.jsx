@@ -18,7 +18,7 @@ const ROLE_ICONS = {
 const FALLBACK = { bg: '#F9FAFB', color: '#6B7280', border: '#E5E7EB' };
 
 export default function Login() {
-  const { login, loading, mockUsers = [] } = useAuth();
+  const { login, loading, mockUsers = [], USE_MOCK } = useAuth();
   const navigate = useNavigate();
   const [loginVal, setLoginVal] = useState('');
   const [password, setPassword] = useState('');
@@ -100,38 +100,42 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0 16px' }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--gray-200)' }} />
-          <span style={{ fontSize: 12, color: 'var(--gray-400)', whiteSpace: 'nowrap' }}>Быстрый вход</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--gray-200)' }} />
-        </div>
+        {USE_MOCK && mockUsers.length > 0 && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0 16px' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--gray-200)' }} />
+              <span style={{ fontSize: 12, color: 'var(--gray-400)', whiteSpace: 'nowrap' }}>Быстрый вход</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--gray-200)' }} />
+            </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {mockUsers.map(u => {
-            const c = ROLE_COLORS[u.role] || FALLBACK;
-            const icon = ROLE_ICONS[u.role] || '👤';
-            return (
-              <button key={u.id} onClick={() => doLogin(u.login, u.password)} disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                  border: '1px solid ' + c.border, borderRadius: 'var(--radius)',
-                  background: c.bg, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--gray-800)', marginBottom: 1 }}>{u.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{u.position_name || u.position || ''}</div>
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
-                  background: c.color + '20', color: c.color, flexShrink: 0 }}>
-                  {u.roleLabel}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {mockUsers.map(u => {
+                const c = ROLE_COLORS[u.role] || FALLBACK;
+                const icon = ROLE_ICONS[u.role] || '👤';
+                return (
+                  <button key={u.id} onClick={() => doLogin(u.login, u.password)} disabled={loading}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                      border: '1px solid ' + c.border, borderRadius: 'var(--radius)',
+                      background: c.bg, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--gray-800)', marginBottom: 1 }}>{u.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{u.position_name || u.position || ''}</div>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+                      background: c.color + '20', color: c.color, flexShrink: 0 }}>
+                      {u.roleLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-        <div style={{ marginTop: 12, fontSize: 12, color: 'var(--gray-400)', textAlign: 'center' }}>
-          Пароль для всех аккаунтов: <b>1234</b>
-        </div>
+            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--gray-400)', textAlign: 'center' }}>
+              Пароль для всех аккаунтов: <b>1234</b>
+            </div>
+          </>
+        )}
 
         <div className="auth-footer">© 2025 В Плюсе. Внутренняя корпоративная платформа.</div>
       </div>

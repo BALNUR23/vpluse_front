@@ -1,18 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '../../layouts/MainLayout';
 import { useAuth } from '../../context/AuthContext';
-import { MessageSquare, CheckCircle, Clock, AlertCircle, X, Eye } from 'lucide-react';
-import { listFeedbackTickets, updateFeedbackStatus } from '../../utils/feedbackStore';
+import { CheckCircle, Clock, AlertCircle, X, Eye } from 'lucide-react';
+import { feedbackAPI } from '../../api/content';
 
 const STATUS_LABELS = { new: 'Новое', in_progress: 'В работе', resolved: 'Решено' };
 const STATUS_COLORS = { new: 'badge-blue', in_progress: 'badge-yellow', resolved: 'badge-green' };
 const STATUS_ICONS = { new: <AlertCircle size={14} />, in_progress: <Clock size={14} />, resolved: <CheckCircle size={14} /> };
 
+function normalizeTicket(raw) {
+  const isAnonymous = raw.is_anonymous ?? raw.isAnonymous ?? false;
+  return {
+    id: raw.id,
+    type: raw.type || raw.ticket_type || '—',
+    text: raw.text || raw.message || raw.body || '',
+    user: isAnonymous ? 'Анонимно' : (raw.full_name || raw.user_name || raw.user || raw.author || 'Пользователь'),
+    userRole: raw.user_role || raw.userRole || 'employee',
+    isAnonymous,
+    date: raw.created_at ? new Date(raw.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }) : (raw.date || ''),
+    status: raw.status || 'new',
+  };
+}
+
 export default function AdminFeedback() {
   const { isSuperAdmin } = useAuth();
-  const [items, setItems] = useState(listFeedbackTickets());
+  const [items, setItems] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    feedbackAPI.list()
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setItems(data.map(normalizeTicket));
+      })
+      .catch(() => {});
+  }, []);
 
   const baseItems = isSuperAdmin
     ? items.filter(i => i.type === 'Жалоба')
@@ -22,12 +45,14 @@ export default function AdminFeedback() {
     all: baseItems.length,
     new: baseItems.filter(i => i.status === 'new').length,
     in_progress: baseItems.filter(i => i.status === 'in_progress').length,
-    resolved: baseItems.filter(i => i.status === 'resolved').length
+    resolved: baseItems.filter(i => i.status === 'resolved').length,
   };
 
-  const setStatus = (id, status) => {
-    const updated = updateFeedbackStatus(id, status);
-    setItems(updated);
+  const setStatus = async (id, status) => {
+    try {
+      await feedbackAPI.reply(id, { status });
+    } catch {}
+    setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i));
     if (selected?.id === id) setSelected(s => ({ ...s, status }));
   };
 
@@ -90,8 +115,8 @@ export default function AdminFeedback() {
                   </td>
                   <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{item.date}</td>
                   <td>
-                    <span className={`badge ${STATUS_COLORS[item.status]}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      {STATUS_ICONS[item.status]} {STATUS_LABELS[item.status]}
+                    <span className={`badge ${STATUS_COLORS[item.status] || 'badge-gray'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {STATUS_ICONS[item.status]} {STATUS_LABELS[item.status] || item.status}
                     </span>
                   </td>
                   <td>
@@ -107,6 +132,7 @@ export default function AdminFeedback() {
           </table>
           {filtered.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--gray-400)' }}>
+              Нет обращений
             </div>
           )}
         </div>
@@ -123,7 +149,7 @@ export default function AdminFeedback() {
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <div><div style={{ fontSize: 11, color: 'var(--gray-400)', textTransform: 'uppercase', marginBottom: 4 }}>Тип</div><span className="badge badge-gray">{selected.type}</span></div>
-                <div><div style={{ fontSize: 11, color: 'var(--gray-400)', textTransform: 'uppercase', marginBottom: 4 }}>Статус</div><span className={`badge ${STATUS_COLORS[selected.status]}`}>{STATUS_LABELS[selected.status]}</span></div>
+                <div><div style={{ fontSize: 11, color: 'var(--gray-400)', textTransform: 'uppercase', marginBottom: 4 }}>Статус</div><span className={`badge ${STATUS_COLORS[selected.status] || 'badge-gray'}`}>{STATUS_LABELS[selected.status] || selected.status}</span></div>
                 <div><div style={{ fontSize: 11, color: 'var(--gray-400)', textTransform: 'uppercase', marginBottom: 4 }}>Сотрудник</div><span style={{ fontSize: 13 }}>{selected.user}</span></div>
                 <div><div style={{ fontSize: 11, color: 'var(--gray-400)', textTransform: 'uppercase', marginBottom: 4 }}>Формат</div><span style={{ fontSize: 13 }}>{selected.isAnonymous ? 'Анонимно' : 'Неанонимно'}</span></div>
                 <div><div style={{ fontSize: 11, color: 'var(--gray-400)', textTransform: 'uppercase', marginBottom: 4 }}>Дата</div><span style={{ fontSize: 13 }}>{selected.date}</span></div>
